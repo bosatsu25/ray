@@ -127,3 +127,17 @@ def test_numbered_lists_match_the_settings():
             count = len(re.findall(rf"^value\.{setting}\.\d+=", lang, re.M))
             runs = [len(m.group(0).splitlines()) for m in re.finditer(r"(?:^\| \d+ \|.*\n)+", text, re.M)]
             assert count in runs, f"{name}: {setting} ({count} 個) の表が無い"
+
+
+def test_readme_credits_the_original_pack_first():
+    """
+    LICENSE の 1.4.a: Fork は README の最初の段落で元のパックを「Based on Ray by kuwacom」と示し、公式の配布先へリンクする
+    2.4: 公式の配布物として見せない
+    """
+    for name, unofficial in (("README.md", "非公式"), ("README.en.md", "unofficial")):
+        paragraphs = [p for p in (ROOT / name).read_text(encoding="utf-8").split("\n\n") if not p.startswith("# ")]
+        first = paragraphs[0]
+        # リンクの記法を外した見た目の文で比べる
+        assert "Based on Ray by kuwacom" in re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", first), name
+        assert "https://github.com/kuwacom/ray" in first, name
+        assert unofficial in first, name
