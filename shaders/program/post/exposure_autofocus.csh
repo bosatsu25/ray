@@ -21,6 +21,7 @@
 //@include "/lib/light/voxel_read.glsl"
 //@include "/lib/post/post_internal.glsl"
 //@include "/lib/sky/sky_color.glsl"
+//@include "/lib/sky/fog.glsl"
 // BEGIN GENERATED includes (tools/gen_includes.py)
 #include "/lib/settings/look.glsl"
 #include "/lib/settings/light.glsl"
@@ -75,6 +76,10 @@
 #include "/lib/sky/clouds.glsl"
 #include "/lib/sky/sh.glsl"
 #include "/lib/sky/sky_color.glsl"
+#include "/lib/sky/fog_template.glsl"
+#include "/lib/sky/climate.glsl"
+#include "/lib/sky/fog_styles.glsl"
+#include "/lib/sky/fog.glsl"
 // END GENERATED includes
 
 layout(local_size_x = 16, local_size_y = 16) in;
