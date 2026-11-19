@@ -101,6 +101,7 @@ If you use a clone of the repository, put the folder that directly contains `sha
 | Entity occlusion | Uses the triangles of player, mob, and block entity models as they are, so shadows follow the shape of the body. Transparent parts such as a skeleton's ribs let light through. Triangles beyond what fits, and everything on the "Low" setting, are approximated with 0.5-block voxels |
 | Handheld lights | Each hand is treated as an independent light source. Shadows on walls come from voxel rays, and shadows from the hands, weapons, and nearby mobs come from screen-space rays. "Handheld Light Shadow Darkness" changes how dark the shadows are |
 | Dropped items, projectiles, burning and glowing entities | Dropped torches, light arrows and fireballs, burning mobs, blazes, glow squid, and so on are registered as light sources and get shadows the same way as placed lights |
+| Glowing blocks from mods | Unregistered blocks (blocks from mods) that emit light also become light sources. Brightness follows the block light level, and the color is one of 8 picked from the average texture color. The block is treated as a full cube ("Modded Glowing Blocks" setting) |
 | Colored floodfill | Spreads the colors of light sources through the voxels as indirect light. When light source shadows are off, this alone provides the lighting. Light that bounces off walls picks up the average wall color (areas next to a red wall turn reddish). "Block Light Wall Bounce" changes the strength |
 
 ### Sky, Materials, and Camera
@@ -251,6 +252,7 @@ When the focal length is recomputed from each prescription, all of them match th
 - The STF 135mm apodization is made by multiplying each point of the depth-of-field bokeh by a transmittance that depends on its position on the aperture (brighter at the center, darker at the edge). The transmittance matches the product's T-stops (T4.5 wide open, T6.7 at F5.7), and stopping down cuts off the outer part of the aperture, so the bokeh approaches an ordinary round shape
 - The softness of the FA 28mm Soft is built from the bloom's downsampled images, using the spread of an in-focus point computed from the prescription (the halo size and the fraction of light outside the core) for each f-number. It is strongest wide open and disappears at F5.6. To change the f-number, set the depth of field "Aperture Control" to "Custom f-number" (with "Bokeh Amount", it stays at the wide-open F2.8). The glow of the Canon 50/0.95 uses the same mechanism and applies only wide open
 - Lenses with undercorrected spherical aberration (such as the FA 28 Soft) render background bokeh as a glowing disc with a bright center, and foreground bokeh as a ring with a bright rim (reversed between front and back)
+- "Wide (Panini projection)" is not a real lens. It is a projection that reduces the sideways stretching at the left and right edges of a rectilinear image at FOV 90 to 110. Vertical lines stay straight, and horizontal lines away from the center bow. With the custom lens, set "Projection" to "Panini" and adjust it with "Panini Strength"
 - Raising "Distortion Strength" exaggerates distortion that is subtle in the prescription (such as the Flektogon's mustache). Turning "Distortion" OFF keeps the game's rectilinear projection, including for fisheyes
 
 ## Quality Presets
@@ -311,6 +313,8 @@ The heavy lighting features can be toggled individually, separately from the pre
 | Entity Occlusion | Light Source Shadows | Mobs and block entities block light | Low |
 | Player Occlusion | Light Source Shadows | The player blocks light | Low |
 | Light Contact Shadows | Light Source Shadows | Fills in details too small for the voxels in screen space | Low, Medium |
+| Light Shadows on Translucents | Light Source Shadows | Glass and water surfaces also receive direct light and shadows from light sources. When OFF they are lit only by the light spread (floodfill), so they are darker. Its cost has not been measured, so it is OFF on every preset | All |
+| Stratified Light Pick | Light Source Shadows | Spreads out over time the order in which lights beyond "Traced Lights per Pixel" are picked, which reduces flicker where many lights are packed | - |
 | Handheld Light Rays | Handheld Light | Voxel ray shadows for handheld lights | Low |
 | Handheld Light Contact Shadows | Handheld Light | Screen-space shadows for handheld lights | Low |
 | Entity Lights | Entity Lights | A switch that turns off the 4 below at once | Low |
@@ -378,6 +382,12 @@ uv run tools/shader_options.py set GI_MODE=0 LIGHT_SHADOWS=false   # Change sett
 uv run tools/run_scene.py --all --reload --tag v2                  # Reload and capture all scenes -> <game>/screenshots/v2_<scene>.png
 ```
 
+```powershell
+uv run tools/scene_regress.py save --all                 # Save the current look as the baseline
+uv run tools/scene_regress.py check --all                # Capture again and compare (exit code 1 when a difference exceeds the limit)
+uv run tools/bench_presets.py noon --out bench_out       # Switch through the quality presets and record the frame time
+```
+
 The game-side setup (installing Minescript, keeping `ray_agent.py` running, and creating the fixed scenes in `scenes.json`) is described in [tools/README.md](tools/README.md#ゲーム内で撮影する) (in Japanese)
 
 ### Common Pitfalls
@@ -438,6 +448,8 @@ Handheld lights are not added to the floodfill, so that they are not counted twi
 
 - [ ] Public release and distribution
   - [ ] Measure the GPU performance needed for each preset
+    - [x] A tool that switches through the presets and records the frame time (`tools/bench_presets.py`)
+    - [ ] Measure on several GPUs and publish the required performance
   - [ ] Test on Linux
     - [x] Compile and link every program on Mesa (llvmpipe) in CI
     - [ ] Load it on real hardware (AMD / Intel / NVIDIA) and check the look
@@ -447,21 +459,34 @@ Handheld lights are not added to the floodfill, so that they are not counted twi
 - [ ] Automated tests
   - [x] Unit tests for the tools and invariants of the pack (`tests/`)
   - [x] Static checks for code that the Iris rewrites cannot handle
-  - [ ] Capture fixed scenes and compare the images automatically
+  - [x] Tests that run shader functions on Mesa and check the numbers (lens reprojection)
+  - [x] A tool that captures fixed scenes and compares them with baseline images (`tools/scene_regress.py`)
+  - [ ] Run the fixed-scene comparison regularly in an environment that can run the game
 - [ ] Light source issues
-  - [ ] Reduce flickering in places crowded with light sources (a light bin holds at most 64 lights, and lights outside the top picks are chosen by probability every frame. Add temporal reuse)
-  - [ ] Add light source shadows to translucent surfaces (they are currently lit only by floodfill, so they are dark)
-  - [ ] Register light from block entities such as ender chests as voxel light sources
-  - [ ] Read the light level of light blocks (`minecraft:light`) correctly
+  - [ ] Reduce flickering in places crowded with light sources (a light bin holds at most 64 lights, and lights outside the top picks are chosen by probability every frame)
+    - [x] Stratify the pick over time (when 8 or fewer lights are left over, they are visited in turn. With dozens, the gain is small)
+    - [ ] Add reuse that carries the picked light over from the previous frame (needs a buffer that keeps history)
+    - [ ] Check the look in the game
+  - [ ] Add light source shadows to translucent surfaces
+    - [x] The "Light Shadows on Translucents" setting adds direct light and shadows from light sources to glass and water (OFF by default)
+    - [ ] Check the look and cost in the game and assign it to presets
+  - [x] Register light from block entities such as ender chests as voxel light sources
+  - [ ] Make light blocks (`minecraft:light`) light sources (they have no model to draw, so no vertices arrive and the current method cannot find them)
   - [x] Make stairs block light in their oriented shape (only inner corners are approximated by the straight stair shape)
   - [ ] Support glowing blocks from mods
+    - [x] Turn unregistered glowing blocks into generic light sources from their light level and texture color
+    - [ ] Check in the game with mods installed
 - [ ] Optimization
   - [ ] Make light tracing lighter in scenes with many light sources
   - [ ] Make volumetric clouds and volumetric light lighter
   - [ ] Revisit the preset assignments based on measurements
 - [ ] Camera and lenses
   - [ ] Add more lens presets
-  - [ ] Implement wide-angle (high FOV) distortion
+    - [x] Add the Trioplan 100mm F2.8 and the Helios 40-2 85mm F1.5 (estimated values)
+    - [ ] Check the rendering in the game and refine the values
+  - [ ] Wide-angle (high FOV) distortion
+    - [x] Add the Panini projection (a mapping that reduces the stretching at the left and right edges)
+    - [ ] Check the look in the game
 - [ ] Distant Horizons support
 
 ## Support

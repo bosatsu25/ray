@@ -191,3 +191,39 @@ def test_forward_declared_functions_are_defined(shaders, glslang):
         expanded = iris_transforms.expand_macros(glslang, src, vs.STAGE_OF_EXT[wrapper.suffix])
         assert expanded is not None, wrapper.name
         assert undefined_prototypes(include_deps.strip_comments(expanded)) == set(), wrapper.name
+
+
+# 既定値と違う側の設定。既定値の検証 (validate_shaders.py) は通らない枝を、関係するプログラムだけコンパイルして確かめる
+OPTION_VARIANTS = [
+    ({"LIGHT_TRANSLUCENT_SHADOWS": True}, ["gbuffers_water.fsh"]),
+    ({"LIGHT_PICK_STRATIFIED": False}, ["deferred1.csh"]),
+    ({"LIGHT_PICK_STRATIFIED": True, "LIGHT_TRACE_COUNT": "1"}, ["deferred1.csh"]),
+    ({"MOD_BLOCK_LIGHTS": False}, ["shadow.vsh", "shadow_solid.vsh", "gbuffers_terrain.vsh"]),
+    ({"LENS_PRESET": "0", "LENS_C_PROJECTION": "2"}, ["final.fsh", "composite20.fsh", "composite22.fsh", "composite25.csh"]),
+    ({"LENS_PRESET": "19"}, ["final.fsh", "composite20.fsh", "composite22.fsh", "composite24.fsh"]),
+    ({"LENS_PRESET": "20"}, ["final.fsh", "composite22.fsh", "composite24.fsh"]),
+    ({"LENS_PRESET": "21"}, ["final.fsh", "composite22.fsh", "composite24.fsh"]),
+]
+
+
+@pytest.mark.parametrize(("overrides", "programs"), OPTION_VARIANTS, ids=lambda v: ",".join(f"{k}={x}" for k, x in v.items()) if isinstance(v, dict) else None)
+def test_non_default_options_compile(overrides, programs, shaders, glslang, tmp_path):
+    req, opt = vs.parse_features()
+    options = vs.parse_settings()
+    for env in (ENV["latest"], ENV["1.7.6"]):
+        for name in programs:
+            label, msgs, _ = vs.compile_one(glslang, tmp_path, _wrapper(shaders, name), "VARIANT", overrides, options, req + opt, env=env)
+            assert msgs == [], label
+
+
+def test_mod_light_ids_are_block_lights(shaders):
+    """未登録の光るブロックの汎用光源 (8 色) が、ブロック光源の帯の中で連番になっている"""
+    import id_tables
+
+    mods = [light for light in id_tables.LIGHTS if light.label.startswith("LIGHT_MOD_FIRST")]
+    assert [light.index for light in mods] == list(range(mods[0].index, mods[0].index + 8))
+    assert mods[-1].index <= id_tables.LIGHT_BLOCK_LAST
+    assert all(light.make.endswith("LT_OCC") and not light.blocks for light in mods)
+    text = (shaders / "lib" / "ids" / "id_decode.glsl").read_text(encoding="utf-8")
+    # シェーダーが返す番号は LIGHT_MOD_FIRST + 0..7
+    assert "LIGHT_MOD_FIRST + k" in text and "? 7 : 1" in text

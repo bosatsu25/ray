@@ -77,3 +77,8 @@ jobs:
       - name: Link on Mesa (Iris 1.7 / Oculus)
         timeout-minutes: 10
         run: xvfb-run -a uv run tools/gl_compile_check.py --no-cache --env 1.7.6
+
+      # シェーダーの関数を実際に動かして数値を確かめるテスト (レンズの再投影の往復など)。OpenGL のコンテキストが要るのでここで回す
+      - name: Shader tests on Mesa
+        timeout-minutes: 5
+        run: xvfb-run -a uv run pytest -q tests/test_gl_lens.py
