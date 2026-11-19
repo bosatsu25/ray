@@ -7,6 +7,7 @@
  * sky モジュール (lib/sky)
  */
 //@include "/lib/common/common.glsl"
+//@include "/lib/common/dh.glsl"
 //@include "/lib/buffers/block_data.glsl"
 //@include "/lib/common/gbuffer.glsl"
 //@include "/lib/common/phase.glsl"
@@ -36,13 +37,15 @@
 #include "/lib/common/math.glsl"
 #include "/lib/common/shading_types.glsl"
 #include "/lib/common/common.glsl"
+#include "/lib/settings/capabilities.glsl"
+#include "/lib/common/transforms.glsl"
+#include "/lib/common/dh.glsl"
 #include "/lib/buffers/block_data.glsl"
 #include "/lib/common/color.glsl"
 #include "/lib/common/encoding.glsl"
 #include "/lib/common/gbuffer.glsl"
 #include "/lib/common/phase.glsl"
 #include "/lib/common/noise.glsl"
-#include "/lib/common/transforms.glsl"
 #include "/lib/buffers/frame_data.glsl"
 #include "/lib/common/water_waves.glsl"
 #include "/lib/common/water_glitter.glsl"
@@ -89,7 +92,6 @@
 #include "/lib/light/trace.glsl"
 #include "/lib/buffers/global_lights.glsl"
 #include "/lib/light/light_select.glsl"
-#include "/lib/settings/capabilities.glsl"
 #include "/lib/light/hand_pose.glsl"
 #include "/lib/light/entity_light.glsl"
 #include "/lib/light/hand_light.glsl"
@@ -214,6 +216,18 @@ void main() {
     vec3 playerPos = screenToPlayer(vec3(texcoord, fixedDepth));
     vec3 dir = normalize(playerPos);
     float dist = isSky ? fogRenderDistance() : length(playerPos);
+#ifdef USE_DH
+    // バニラの深度では空でも、DH の地形・水がある画素は地形としてその距離まで霞ませる
+    if (isSky) {
+        float dhDepth = texelFetch(dhDepthTex0, texel, 0).r;
+        if (dhDepth < 1.0) {
+            isSky = false;
+            playerPos = dhScreenToPlayer(vec3(texcoord, dhDepth));
+            dir = normalize(playerPos);
+            dist = length(playerPos);
+        }
+    }
+#endif
     // 地形の手前の雲 (空気中のみ)。フォグの後に重ねる
     vec4 frontClouds = vec4(0.0, 0.0, 0.0, 1.0);
 

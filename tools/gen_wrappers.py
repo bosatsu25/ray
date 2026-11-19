@@ -83,6 +83,11 @@ BODIES: dict[str, str] = {
     "composite1.fsh": "surface/water_trace.fsh",
     "composite2_a.csh": "surface/water_barrier.csh",
     "composite2.fsh": "surface/translucent_composite.fsh",
+    "dh_terrain.vsh": "surface/dh_terrain.vsh",
+    "dh_terrain.fsh": "surface/dh_terrain.fsh",
+    # 頂点シェーダーは地形と同じ本体
+    "dh_water.vsh": "surface/dh_terrain.vsh",
+    "dh_water.fsh": "surface/dh_water.fsh",
     # post
     "composite20.fsh": "post/taa.fsh",
     "composite21.fsh": "post/motion_blur.fsh",
@@ -152,6 +157,9 @@ PROGRAMS: dict[str, list[str] | dict[str, Body | None]] = {
     "gbuffers_water": shared("surface/gbuffers_translucent", "GBUF_WATER"),
     "gbuffers_hand_water": shared("surface/gbuffers_translucent", "GBUF_HAND_WATER"),
     "gbuffers_particles_translucent": shared("surface/gbuffers_translucent", "GBUF_PARTICLES_TRANSLUCENT"),
+    # Distant Horizons (入っている時だけ読まれる)。dh_terrain はバニラの地形より先、dh_water は deferred の後でバニラの水より先
+    "dh_terrain": ["vsh", "fsh"],
+    "dh_water": ["vsh", "fsh"],
     # deferred
     "deferred": ["csh", "csh_a"],
     "deferred1": ["csh"],
@@ -248,6 +256,10 @@ DISABLED: list[Disable] = [
     Disable(("composite22",), "#ifndef DOF"),
     # 局所トーンマップもブルームの縮小タイルを読む
     Disable(("composite23", "composite24"), "#if !defined BLOOM && LOCAL_TONEMAP == 0"),
+    # DH のプログラムが無ければ、Iris は DH を「シェーダーなし」として DH 自身の描画に任せる (DH_SUPPORT OFF はこれまでと同じ)
+    Disable(("dh_terrain", "dh_water"), "#ifndef DH_SUPPORT", ("world0",)),
+    Disable(("dh_terrain", "dh_water"), None, ("world-1", "world1"),
+            "Distant Horizons terrain is only shaded in dimensions with a sky"),
 ]
 
 ENABLES_BEGIN = "# BEGIN GENERATED program enables (tools/gen_wrappers.py)"

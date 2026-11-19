@@ -5,6 +5,7 @@
  * sky モジュール (lib/sky)
  */
 //@include "/lib/common/common.glsl"
+//@include "/lib/common/dh.glsl"
 //@include "/lib/sky/sky.glsl"
 //@include "/lib/sky/cloud_volume.glsl"
 // BEGIN GENERATED includes (tools/gen_includes.py)
@@ -23,13 +24,15 @@
 #include "/lib/common/math.glsl"
 #include "/lib/common/shading_types.glsl"
 #include "/lib/common/common.glsl"
+#include "/lib/settings/capabilities.glsl"
+#include "/lib/common/transforms.glsl"
+#include "/lib/common/dh.glsl"
 #include "/lib/buffers/frame_data.glsl"
 #include "/lib/sky/sh.glsl"
 #include "/lib/common/color.glsl"
 #include "/lib/common/phase.glsl"
 #include "/lib/buffers/images.glsl"
 #include "/lib/sky/atmosphere.glsl"
-#include "/lib/common/transforms.glsl"
 #include "/lib/common/celestial_shape.glsl"
 #include "/lib/common/noise.glsl"
 #include "/lib/sky/celestial.glsl"
@@ -80,6 +83,18 @@ void main() {
     vec2 uv = (vec2(sampleTexel) + 0.5) / viewSize();
     vec3 dir = normalize(viewToPlayerDir(screenToView(vec3(uv, 1.0))));
     float maxDist = depth >= 1.0 ? 1e9 : length(screenToPlayer(vec3(uv, fixHandDepth(depth))));
+#ifdef USE_DH
+    // バニラの地形が無い所は、DH の地形までで積分を止める (遠景の山の向こうの雲が山の手前に出ない)。バニラの深度と同じくブロック内の最も遠い深度
+    if (depth >= 1.0) {
+        float dhDepth = 0.0;
+        for (int y = 0; y < CLOUD_RES; y++) {
+            for (int x = 0; x < CLOUD_RES; x++) {
+                dhDepth = max(dhDepth, texelFetch(dhDepthTex1, min(blockOrigin + ivec2(x, y), fullSize - 1), 0).r);
+            }
+        }
+        if (dhDepth < 1.0) maxDist = length(dhScreenToPlayer(vec3(uv, dhDepth)));
+    }
+#endif
 
     // 雲の層にかからない視線 (雲の下から地形を見る等) はマーチしない
     if (maxDist < 1e8 && cameraPosition.y < cloudLowestBase() && maxDist < cloudLowestBase() - cameraPosition.y) {

@@ -134,7 +134,7 @@ Iris の実行順 (setup -> begin -> shadow -> shadowcomp -> prepare -> gbuffers
 - Iris は同じパスの compute (composite1_a) を fragment (composite1) の前に走らせる。VL の有効条件は `program.<world>/composite1_a.enabled` で、composite1 の fragment (水の光線を辿る処理) は止まらない
 - ネザー・エンドは大気 LUT と雲のパスを外す (shaders.properties)。shadow パスはボクセル化のため全ディメンションで回す
 - `particles.ordering = mixed`: 不透明パーティクルは G バッファ (gbuffers_particles)、半透明は前方 (gbuffers_particles_translucent)。MC 26.1 未満の Iris は花火の火花を不透明側に回すので、発光と花火の光の登録は gbuffers_particles でも行う (`FX_SPARKS_IN_PARTICLES`、不透明の粒は画素を間引き TAA で均す。頂点色が真っ白の粒は炎・溶岩の粒と区別できず光らない)
-- DH (Distant Horizons) は未対応 (dh_* プログラムなし)。DH の水 (dh_water) を足す時の入口は `lib/common/water_lod.glsl` の `waterLod`: DH の深度から求めた距離と視線の cos を渡し (1 画素の角度は dhProjection も同じ画角なので `waterPixelAngle()` のまま)、返った `WaterLod` で `getWaterNormal` と合成 (composite2) の粗さ・フレネル・鏡の重みを決める。描画距離の先も遠い層 (`farAmp`) が残るので鏡にはならない。遠景を軽くする段 (層を読まない・視差なし・鏡の SSR を辿らない) とその移り変わりも、waterLod に足して決める。層 0-4 を読まない段でも遠い層 (`WaterLod.farAmp`) は残す (止めると鏡に戻る。読むのは遠い層の 2 本、移り変わりで 3 本だけ)。波頭・泡・WATER_GLITTER のむらの高さの読みは `heights` を 0 にすると止まる
+- DH (Distant Horizons) は設定 `DH_SUPPORT` (既定 OFF、実験的) で対応する。dh_terrain が G バッファ、dh_water が colortex0 に書き、深度は `dhDepthTex0` / `1` (下の「既知の制約と未決事項」)。今の dh_water は波を持たない平らな面で、空の映り込みだけを描く。バニラの水と同じ波と粗さを DH の水に付ける時の入口は `lib/common/water_lod.glsl` の `waterLod`: DH の深度から求めた距離と視線の cos を渡し (1 画素の角度は dhProjection も同じ画角なので `waterPixelAngle()` のまま)、返った `WaterLod` で `getWaterNormal` と合成 (composite2) の粗さ・フレネル・鏡の重みを決める。描画距離の先も遠い層 (`farAmp`) が残るので鏡にはならない。遠景を軽くする段 (層を読まない・視差なし・鏡の SSR を辿らない) とその移り変わりも、waterLod に足して決める。層 0-4 を読まない段でも遠い層 (`WaterLod.farAmp`) は残す (止めると鏡に戻る。読むのは遠い層の 2 本、移り変わりで 3 本だけ)。波頭・泡・WATER_GLITTER のむらの高さの読みは `heights` を 0 にすると止まる
 
 ---
 
@@ -805,7 +805,7 @@ uv run tools/gl_compile_check.py --full      # 同上を既定値 x 3 ディメ�
 # キャッシュ (tools/.cache/) を無視するのは --no-cache
 uv run tools/gen_wrappers.py --check         # プログラム本体とラッパー、program.*.enabled の生成の対応
 uv run tools/gen_capabilities.py --check     # ローダーの能力と機能の生成物が最新か
-uv run tools/validate_shaders.py --env 1.7.6 # ローダーを 1 つだけ (latest / 26.1 / mid / 1.7.6。指定しないと 4 つとも検証する)
+uv run tools/validate_shaders.py --env 1.7.6 # ローダーを 1 つだけ (latest / dh / 26.1 / mid / 1.7.6。指定しないと 5 つとも検証する)
 uv run tools/gl_compile_check.py --env 1.7.6 # 同じ本文を実機のドライバで (既定は latest)
 uv run pytest -q tests                       # tools/ の単体テストとパックの不変条件 (tests/)
 uv run tools/check_slots.py --intervals --all # colortex の論理名の区間の外の読み書き (validate_shaders.py --full は既定値 x 3 ディメンションを見る)
@@ -813,7 +813,7 @@ uv run tools/check_slots.py --intervals --all # colortex の論理名の区間�
 
 validate_shaders.py は include 展開・設定差し替え・Iris マクロ注入をしてからコンパイルし、エラーを元ファイルの行番号で表示する。
 静的チェック: プロファイルの値の妥当性、HIGH = 既定値、screen と lang の網羅、workGroups のリテラル性、`*.properties` が ASCII だけか、block/item の状態値にカンマ区切りが無いか、ラッパーと `program.*.enabled` の生成が最新か、能力と機能の生成物 (`gen_capabilities.py`) が最新か。
-ローダーごとの検査: `tools/capabilities.py` の `ENVS` (latest = Iris 1.11.6 以降と MC 26.3 / 26.1 = Iris 1.10.5〜1.11.x / mid = Iris 1.8〜1.10.4 / 1.7.6 = Iris 1.7.x と Oculus) ごとにマクロを変えてコンパイルし、`tools/loader_checks.py` が、そのローダーで読み込めない記述 (flag、`bufferObject` の添字 (latest 12、mid と 1.7.6 は 8)、image の数と pixel type・format、`RENDERTARGETS` のカンマの後の空白)、colortex の上限を超える使用 (mid と 1.7.6 は 16 枚、latest と 26.1 は 32 枚。実際はどのローダーでも colortex0〜15 だけを使い、16 以上は失敗)、`MC_VERSION` / `IRIS_VERSION` / `MAX_COLOR_BUFFERS` / `IRIS_INLINE_GLINT` の生成物の外での使用を調べる。
+ローダーごとの検査: `tools/capabilities.py` の `ENVS` (latest = Iris 1.11.6 以降と MC 26.3 / dh = latest に Distant Horizons が入った環境 / 26.1 = Iris 1.10.5〜1.11.x / mid = Iris 1.8〜1.10.4 / 1.7.6 = Iris 1.7.x と Oculus) ごとにマクロを変えてコンパイルし、`tools/loader_checks.py` が、そのローダーで読み込めない記述 (flag、`bufferObject` の添字 (latest 12、mid と 1.7.6 は 8)、image の数と pixel type・format、`RENDERTARGETS` のカンマの後の空白)、colortex の上限を超える使用 (mid と 1.7.6 は 16 枚、latest と 26.1 は 32 枚。実際はどのローダーでも colortex0〜15 だけを使い、16 以上は失敗)、`MC_VERSION` / `IRIS_VERSION` / `MAX_COLOR_BUFFERS` / `IRIS_INLINE_GLINT` の生成物の外での使用を調べる。
 Iris の書き換えの検査: `tools/iris_transforms.py` が、Iris が本文に掛ける書き換え (`ENVS` の `transforms`) が効かない書き方を探す。逆 Z (Iris 1.11.4+26.2 以降) では、マクロを展開した本文で深度のサンプラーの使い方を辿り、Iris が `1.0 - 値` を挿せない使い方 (`sampler2D` 以外での宣言、引数が `sampler2D` でない関数に渡す、`gl_FragDepth` の単純な代入以外) を報告する。`iris_`・`irisMain`・`moj_import` で始まる名前と、Iris が定義を差し込む `mc_hasGlint` / `mc_sampleGlint` の定義も報告する。MC 26.3 の本文では Iris と同じく `mc_hasGlint()` / `mc_sampleGlint()` を差し込んでからコンパイルする。
 
 gl_compile_check.py は同じ前処理結果を不可視ウィンドウの OpenGL 4.6 compatibility コンテキストで実際にコンパイル・リンクする (glfw + PyOpenGL)。
@@ -846,7 +846,15 @@ shaders.properties の `#if` を評価して `program.*.enabled = false` のプ�
 - `minecraft:light` (ライトブロック) は光源にできていない。ライトブロックは描くモデルを持たない (バリアと同じ) ので頂点が来ず、影のパスでボクセルに書けない。Iris にはブロックの位置を頂点以外から知る手段が無い。バニラのライトマップ (lmcoord) から足りない光を補う方法はあるが、floodfill との明るさの釣り合いを実機で合わせる必要がある (未着手)
 - MOD ブロックは未登録 = 完全な固体扱い。光る MOD ブロックは `MOD_BLOCK_LIGHTS` で汎用の光源になる: 頂点の発光レベル (`at_midBlock.w`) が 1 以上の未登録のブロックを、テクスチャの平均の色 (アトラスの粗い mip) の色相で 8 色 (`LIGHT_MOD_FIRST` から 白・赤・橙・黄・緑・水色・青・マゼンタ) に分ける (`modLightBlockId`)。ボクセルは ID の 12bit だけで色を持てないので、色は 8 種類に丸まる。形は立方体、面は明るい画素が光る。形や色を合わせたいブロックは個別に登録する (タグ `%c:...` も使える)
 - エンダーチェスト・コンジット・エンドポータル・エンドゲートウェイの光は、影のパスが `blockEntityId` から光源に登録する (`injectBlockEntityLight`。「ドロップ・投擲・燃焼・発光エンティティ」参照)。影のパスの距離の外では登録されない
-- DH / Voxy / Photonics 連携は未対応。DH を入れていると Iris は「DH シェーダーなし」として扱う (LOD の見た目は保証しない)
+- Distant Horizons (DH) は設定 `DH_SUPPORT` で対応する (既定 OFF。実機では確かめておらず、コンパイルと Mesa のリンクを通しただけ)。OFF では dh_* のプログラムを止め、Iris は「DH シェーダーなし」として DH 自身の描画に任せる。オーバーワールドだけ
+  - dh_terrain (バニラの地形より先に描かれる): 頂点色・面の法線・ライトマップ・材質の種類 (`dhMaterialId`) から G バッファを書く。バニラの地形が必ずある範囲 (描画距離 - 32 ブロック) の内側は捨て、その外で重なる所は後から描かれるバニラの地形が上書きする
+  - 深度は別: DH は `dhDepthTex0` / `1` に `dhProjection` (near / far がバニラと違う) で書き、`depthtex` には入らない。DH の地形だけがある画素は `depthtex` では空 (1.0) に見えるので、`lib/common/dh.glsl` の `USE_DH` の中で DH の深度から位置を戻す
+  - 照明 (deferred30 の `shadeDhTerrain`): 影マップ・ボクセル・GI は描画距離の中だけなので使わない。太陽は影なしでスカイライトから日向を推定 x 雲影、環境光は空の SH とバニラのライトマップ相当。鏡面・AO・GI・設置光源・SSS は無い
+  - フォグ: `fogRenderDistance()` を DH の描画距離にし、景色の成分の濃さを端の光学的深さが `FOG_EDGE_DEPTH` になるまで薄める (`fogScenicDensityScale`)。描画距離端のフォグも DH の端に移る。composite19 と composite1_a は DH の画素をその距離の地形として扱う
+  - 雲は DH の地形までで積分を止め (deferred20)、画面空間の光芒は DH の地形を遮蔽に数える
+  - dh_water (deferred の後、バニラの水より先): バニラの水の経路 (colortex4 / 5 と composite の屈折・反射) はバニラの深度を前提にしていて使えないので、空の映り込みと水の色の拡散を前方で求めて colortex0 に不透明で書く。波・屈折・地形の映り込みは無い
+  - 入れていないもの: DH の影 (`dhShadow.enabled = false`)、反射と SSR に映る DH の地形、DoF とオートフォーカスの DH の距離 (空として無限遠)、雲の下から見た遠景の山の手前の雲、ネザーとエンド
+- Voxy / Photonics 連携は未対応
 - Iris 26.1 は半透明エンティティ (プレイヤーのスキン・マネキン・文字・旗の模様等) を deferred の後 (`renderTranslucentFeatures`) に gbuffers_entities_translucent / gbuffers_block_translucent で描く。G バッファ経路のフォールバック (gbuffers_entities) だと deferred30 で照明されず消えるので、両者は半透明の前方シェーディング (`program/surface/gbuffers_translucent.*`) で用意した。速度は書かず深度再投影に任せる (並べ替えで at_velocity が使えないため)。画面空間の影 (手持ち光源の SS 影等) には写らないので、三人称の自分の影は手持ち光源のボクセル DDA で落とす。この層は水より先に描かれ、水の合成が水の中の自分を水面の上に重ねるので、カメラが水の上の時は、水面より下の自分の画素を捨て、composite1 (`water_trace.fsh`) が屈折した視線を自分の三角形 (光源シャドウ用に影のパスで持っている) に当てて、三角形ごとの平均の色を当たった点で照らして描く (屈折・波の揺れ・水の吸収が付く。一人称は体を描かないので当てない)。三角形を持たない設定 (LIGHT_OCCLUSION_MODE 0 か LIGHT_PLAYER_OCCLUSION OFF か屈折なし) では、捨てずに水の吸収と内散乱だけを掛ける (`lib/surface/water_self.glsl`。水面の高さはボクセルの水のブロックから)。上に水のある水のセルは面が描かれずボクセルに空気として残るので、空気は上に水がある限り水とみなして水面まで辿る。足のあるセルだけは水の入ったハーフブロック・階段などでも上の水を探す。三角形の当たりは捨てる判定と同じ関数で確かめ、捨てた所だけ描く (水面のすぐ下の帯などで二重にならない)。乗り物に乗っている間 (`isRiding`) は捨てない (ボートの中は水を描かず、捨てた脚が消える)。一番上の水が流れる水 (上面が水源より低い) の時も捨てない (高さが分からず、水面より上の体を捨てると欠ける。屈折は付かない)。カメラが水の中の時は逆に、水面より上の自分の画素を捨てる (この層に残すと水面の手前に貼り付き、水の中の色と霧が掛かり、スネルの窓の外でも見える)。composite1 が水面の上へ屈折した視線を三角形に当てて水面越しに描き、全反射の画素は反射した視線を水の中の体に当てて鏡面の映り込み (TEX_WATER_MIRROR、giRawImg を composite1 -> 2 の間だけ借りる) に重ねる (自分は画面の像に無く SSR では映らない。SSR の当たりが体より手前ならそちら。REFLECTIONS 0 では映らない)。高さは真下へ空気のセルを辿った最初の水のセルの水面からで、流れる水・足場のブロックの上・乗り物の中は対象外。ガラス・氷・ほかの半透明の物越しに見た水の中の自分は欠ける (一番手前の半透明が水でない画素は composite1 が三角形を当てず、水の画素も無い。直すには半透明の層の下の水にも三角形を当てる必要があり重い)
 - gbuffers_item は未用意 (gbuffers_entities にフォールバック)
 - Linux は実機で読み込んでいない。Mesa のソフトウェア描画 (llvmpipe) で全プログラムの compile + link が通ることだけを CI で確かめている (`.github/workflows/validate.yml` の mesa-link)。Mesa は宣言だけで定義の無い関数の呼び出しを、呼ばれない関数の中でもリンクで落とす

@@ -9,9 +9,11 @@ ENV = {e.name: e for e in caps.ENVS}
 
 
 def test_missing_programs_follow_capabilities():
-    assert lc.missing_programs(ENV["latest"]) == set()
-    assert lc.missing_programs(ENV["mid"]) == set()
-    assert lc.missing_programs(ENV["1.7.6"]) == {"shadow_entities", "shadow_block", "gbuffers_lightning"}
+    dh = {"dh_terrain", "dh_water"}
+    assert lc.missing_programs(ENV["dh"]) == set()
+    assert lc.missing_programs(ENV["latest"]) == dh
+    assert lc.missing_programs(ENV["mid"]) == dh
+    assert lc.missing_programs(ENV["1.7.6"]) == {"shadow_entities", "shadow_block", "gbuffers_lightning"} | dh
 
 
 def test_unknown_feature_flag_is_reported_per_env():

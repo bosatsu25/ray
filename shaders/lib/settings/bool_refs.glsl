@@ -112,6 +112,8 @@
 #endif
 #ifdef WATER_TEXTURE
 #endif
+#ifdef DH_SUPPORT
+#endif
 #ifdef SPECULAR_SPARKLE
 #endif
 #ifdef STARS

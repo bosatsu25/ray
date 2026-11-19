@@ -321,6 +321,8 @@ option.EMISSION_CHARGED_CREEPER_BRIGHTNESS=Charged Creeper / Wither Armor Bright
 option.EMISSION_CHARGED_CREEPER_BRIGHTNESS.comment=How brightly the electric swirl of a creeper charged by lightning and of the wither's armor glows blue-white, so it stands out at night. 0 = vanilla brightness. Does not change the light it casts
 option.CREAKING_EYE_BRIGHTNESS=Creaking Eye Brightness
 option.CREAKING_EYE_BRIGHTNESS.comment=How brightly the glowing eyes of a creaking shine in eerie orange-red. 0 = no glow. Does not cast light on the surroundings
+option.DH_SUPPORT=Distant Horizons Support (Experimental)
+option.DH_SUPPORT.comment=When Distant Horizons (the distant terrain mod) is installed, draws its terrain and water with this pack's light, fog, and sky. When OFF, Distant Horizons keeps its own rendering. Experimental and not tested in the game. Overworld only. Distant terrain gets no shadows, light sources, or reflections.
 option.MOD_BLOCK_LIGHTS=Modded Glowing Blocks
 option.MOD_BLOCK_LIGHTS.comment=Turns unregistered blocks (blocks from mods) that emit light into light sources. Brightness follows the block light level, and the color is one of 8 (white, red, orange, yellow, green, cyan, blue, magenta) picked from the average texture color. The block is treated as a full cube.
 option.GLOW_LICHEN_LIGHT=Glow Lichen Light

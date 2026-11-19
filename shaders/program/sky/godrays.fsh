@@ -30,6 +30,8 @@
 #include "/lib/common/common.glsl"
 #include "/lib/common/noise.glsl"
 #include "/lib/common/transforms.glsl"
+#include "/lib/settings/capabilities.glsl"
+#include "/lib/common/dh.glsl"
 #include "/lib/buffers/frame_data.glsl"
 #include "/lib/common/frame_offset.glsl"
 #include "/lib/common/phase.glsl"

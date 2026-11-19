@@ -18,6 +18,7 @@
 //@include "/lib/common/color.glsl"
 //@include "/lib/common/constants.glsl"
 //@include "/lib/common/dimension.glsl"
+//@include "/lib/common/dh.glsl"
 //@include "/lib/common/look_presets.glsl"
 //@include "/lib/common/math.glsl"
 //@include "/lib/common/noise.glsl"
@@ -172,7 +173,14 @@ float fogRainFactor() { return max(rainStrength, rainWetness * 0.4); }
  * Distant Horizons に対応する時は、ここを DH の描画距離にする。その時は σ0 R が FOG_EDGE_DEPTH を超えるので縮めず (D = 無限)、
  * 代わりに景色の成分の濃さを FOG_EDGE_DEPTH / R まで下げる (docs/architecture.md「フォグ」)
  */
+#ifdef USE_DH
+float fogRenderDistance() { return max(far, dhRenderBlocks()); }
+// 景色の成分の濃さに掛ける倍率。物理のままでは DH の描画距離の端の光学的深さが FOG_EDGE_DEPTH を大きく超え、遠景が全部霞に消えるので、
+// 端でちょうど FOG_EDGE_DEPTH になるまで薄める (バニラの描画距離では距離を縮めて合わせるのに対し、DH では濃さを下げて合わせる)
+float fogScenicDensityScale() { return min(1.0, FOG_EDGE_DEPTH / (FOG_SCENIC_SIGMA0 * fogRenderDistance())); }
+#else
 float fogRenderDistance() { return far; }
+#endif
 
 // 景色の成分の写像の 1 / D。物理のままで端の光学的深さが FOG_EDGE_DEPTH に届くなら 0 (縮めない)
 float fogScenicInvD() {
@@ -182,8 +190,14 @@ float fogScenicInvD() {
 }
 
 // 景色の成分の写像した距離 d (1 + (d / D)^2) と、その d の微分 (レイマーチの 1 歩の重み)
+#ifdef USE_DH
+// 濃さの倍率は距離に掛けても同じ (光学的深さ = 濃さ x 距離)。景色の成分はどれもこの 2 つを通るので、ここで掛ければ全部に効く
+float fogScenicDistance(float d, float invD) { return d * (1.0 + sqr(d * invD)) * fogScenicDensityScale(); }
+float fogScenicStretch(float d, float invD) { return (1.0 + 3.0 * sqr(d * invD)) * fogScenicDensityScale(); }
+#else
 float fogScenicDistance(float d, float invD) { return d * (1.0 + sqr(d * invD)); }
 float fogScenicStretch(float d, float invD) { return 1.0 + 3.0 * sqr(d * invD); }
+#endif
 
 float fogSoftplus(float x) { return max(x, 0.0) + log(1.0 + exp(-abs(x))); }
 // 上端 top、幅 w のロジスティック (下で 1、上で 0) と、その y の原始関数 (閉形式で光学的深さを出す)
@@ -564,7 +578,8 @@ vec3 applyAerialPerspective(vec3 color, vec3 playerPos) {
 // 描画距離端のフォグ率 [0,1] (1 = 完全に空へ溶ける)
 float getBorderFog(vec3 playerPos) {
 #ifdef BORDER_FOG
-    float d = length(playerPos.xz) / far;
+    // DH がある時は、地形が空へ溶ける端は DH の描画距離 (バニラの描画距離の端では溶かさず、DH の地形へそのまま続ける)
+    float d = length(playerPos.xz) / fogRenderDistance();
     return smoothstep(BORDER_FOG_START, 1.0, d);
 #else
     return 0.0;
