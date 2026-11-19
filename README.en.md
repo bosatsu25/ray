@@ -58,7 +58,7 @@ Ghost color and shape, distortion, vignetting, bokeh shape, and chromatic aberra
 > Ray does not work with OptiFine. It relies on features that only Iris has, such as SSBOs, custom images, and compute shaders
 
 > [!NOTE]
-> Distant Horizons is not supported yet (the pack has no `dh_*` programs). If you keep DH installed, Iris treats Ray as a pack without DH shaders, but the look of the LOD area is not guaranteed
+> Distant Horizons support is experimental and OFF by default ("Distant Horizons Support (Experimental)" on the top settings screen). When ON, the distant terrain and water are drawn with this pack's light, fog, and sky, but it has not been tested in the game yet. Distant terrain gets no shadows, placed light sources, or reflections, and only the Overworld is supported. When OFF, Distant Horizons keeps its own rendering and the look of the LOD area is not guaranteed
 
 ### Supported Versions
 
@@ -355,7 +355,7 @@ uv sync                                   # First time only. Installs Python 3.1
 uv run tools/validate_shaders.py          # Reproduces the Iris preprocessor and compiles with glslang (defaults, Overworld)
 uv run tools/validate_shaders.py --full   # Defaults in all 3 dimensions, all profiles in the Overworld
 uv run tools/gl_compile_check.py          # compile + link with your local GPU driver
-uv run tools/validate_shaders.py --env 1.7.6   # One loader only (latest / 26.1 / mid / 1.7.6). Without it, all 4 are validated
+uv run tools/validate_shaders.py --env 1.7.6   # One loader only (latest / dh / 26.1 / mid / 1.7.6). Without it, all 5 are validated
 uv run tools/gl_compile_check.py --env 1.7.6   # compile + link the source for older Iris and Oculus (default: latest = Minecraft 26.3)
 uv run pytest -q tests                    # Unit tests for tools/ and tests for the rules of the pack (no GPU or game needed)
 ```
@@ -488,6 +488,9 @@ Handheld lights are not added to the floodfill, so that they are not counted twi
     - [x] Add the Panini projection (a mapping that reduces the stretching at the left and right edges)
     - [ ] Check the look in the game
 - [ ] Distant Horizons support
+  - [x] The "Distant Horizons Support (Experimental)" setting brings the distant terrain and water into the lighting, fog, and clouds (OFF by default)
+  - [ ] Check the look in the game with Distant Horizons installed
+  - [ ] Shadows on distant terrain, distant terrain in reflections, the Nether and the End
 
 ## Support
 

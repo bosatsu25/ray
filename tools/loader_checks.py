@@ -35,6 +35,7 @@ GENERATED_END_RE = re.compile(r"^\s*#\s*END GENERATED\b")
 CAP_PROGRAMS = {
     "CAP_SHADOW_ENTITIES": ("shadow_entities", "shadow_block"),
     "CAP_LIGHTNING_PROGRAM": ("gbuffers_lightning",),
+    "CAP_DISTANT_HORIZONS": ("dh_terrain", "dh_water"),
 }
 
 

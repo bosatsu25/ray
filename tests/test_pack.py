@@ -227,3 +227,58 @@ def test_mod_light_ids_are_block_lights(shaders):
     text = (shaders / "lib" / "ids" / "id_decode.glsl").read_text(encoding="utf-8")
     # シェーダーが返す番号は LIGHT_MOD_FIRST + 0..7
     assert "LIGHT_MOD_FIRST + k" in text and "? 7 : 1" in text
+
+
+# Distant Horizons 対応 (DH_SUPPORT)。既定は OFF で、DH の入った環境 (dh) で ON にした時だけ本文が変わる
+DH_ON = {"DH_SUPPORT": True}
+DH_PROGRAMS = ["dh_terrain.vsh", "dh_terrain.fsh", "dh_water.vsh", "dh_water.fsh", "deferred30.fsh", "deferred20.fsh",
+               "composite1_a.csh", "composite12.fsh", "composite19.fsh"]
+
+
+def _source_with(shaders, world: str, name: str, env_name: str, overrides: dict) -> str:
+    req, opt = vs.parse_features()
+    return vs.build_source(shaders / world / name, overrides, vs.parse_settings(), req + opt, ENV[env_name])[0]
+
+
+def test_dh_programs_compile_when_enabled(shaders, glslang, tmp_path):
+    req, opt = vs.parse_features()
+    options = vs.parse_settings()
+    for name in DH_PROGRAMS:
+        label, msgs, _ = vs.compile_one(glslang, tmp_path, _wrapper(shaders, name), "DH", DH_ON, options, req + opt, env=ENV["dh"])
+        assert msgs == [], label
+
+
+def test_dh_code_is_active_only_with_the_mod_and_the_setting(shaders):
+    """DH の入っていない環境や設定 OFF では、DH の uniform を 1 つも宣言しない (これまでと同じ本文になる)"""
+    assert "shadeDhTerrain(" in _active_code(_source_with(shaders, "world0", "deferred30.fsh", "dh", DH_ON))
+    for env_name, overrides in (("dh", {}), ("latest", DH_ON), ("1.7.6", DH_ON)):
+        code = _active_code(_source_with(shaders, "world0", "deferred30.fsh", env_name, overrides))
+        assert "dhDepthTex" not in code and "shadeDhTerrain" not in code, env_name
+
+
+def test_dh_is_overworld_only(shaders):
+    """フォグの式が大気を前提にしているので、ネザーとエンドでは DH の画素を扱わない"""
+    for world in ("world-1", "world1"):
+        code = _active_code(_source_with(shaders, world, "deferred30.fsh", "dh", DH_ON))
+        assert "dhDepthTex" not in code, world
+
+
+def test_dh_programs_are_disabled_by_default(shaders):
+    options = vs.parse_settings()
+    for overrides, expected in (({}, True), (DH_ON, False)):
+        macros = {**vs.IRIS_MACROS, **ENV["dh"].macros, **loader_checks.settings_macros(options, overrides)}
+        disabled = vs.disabled_programs(loader_checks.preprocessed_properties(shaders, macros))
+        assert ("world0/dh_terrain" in disabled) is expected
+        assert ("world0/dh_water" in disabled) is expected
+        # 空の無いディメンションでは設定に依らず止める
+        assert "world-1/dh_terrain" in disabled and "world1/dh_water" in disabled
+
+
+def test_dh_depth_reads_survive_the_reverse_z_transform(shaders, glslang):
+    """DH の深度 (dhDepthTex0 / 1) も Iris が逆 Z から戻す対象。書き換えが効く読み方だけをしている"""
+    for name in ("deferred30.fsh", "deferred20.fsh", "composite1_a.csh", "composite12.fsh", "composite19.fsh"):
+        src = _source_with(shaders, "world0", name, "dh", DH_ON)
+        text = iris_transforms.expand_macros(glslang, src, vs.STAGE_OF_EXT["." + name.rsplit(".", 1)[1]])
+        assert text is not None, name
+        assert "dhDepthTex" in include_deps.strip_comments(text), name
+        assert iris_transforms.reverse_z_problems(name, text) == [], name

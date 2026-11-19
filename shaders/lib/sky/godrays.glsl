@@ -14,6 +14,7 @@
 //@include "/lib/common/uniforms.glsl"
 //@include "/lib/common/samplers.glsl"
 //@include "/lib/common/transforms.glsl"
+//@include "/lib/common/dh.glsl"
 //@include "/lib/buffers/frame_data.glsl"
 //@include "/lib/sky/clouds.glsl"
 //@include "/lib/buffers/slots.glsl"
@@ -61,7 +62,12 @@ bool godraysLightUv(out vec2 lightUv, out float outside) {
 float evalGodraysSource(vec2 uv, vec3 lightView) {
     if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) return 0.0;
     vec4 d = textureGather(depthtex2, uv, 0);
-    float sky = dot(vec4(greaterThanEqual(d, vec4(1.0))), vec4(0.25));
+    vec4 open = vec4(greaterThanEqual(d, vec4(1.0)));
+#ifdef USE_DH
+    // DH の遠景の山も光を遮る (バニラの深度では空に見える)
+    open *= vec4(greaterThanEqual(textureGather(dhDepthTex1, uv, 0), vec4(1.0)));
+#endif
+    float sky = dot(open, vec4(0.25));
     if (sky <= 0.0) return 0.0;
     // 深度 1 の逆投影は無限遠で NaN になりうるので、同じ向きになる中間の深度で求める
     vec3 v = normalize(screenToView(vec3(uv, 0.5)));

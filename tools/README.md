@@ -84,7 +84,7 @@ uv run tools/gen_capabilities.py --check            # 能力と機能の生成�
 uv run tools/check_slots.py --intervals --all       # colortex の論理名の区間の外の使用
 ```
 
-ローダーは `capabilities.py` の `ENVS` の名前で選びます。`latest` は Iris 1.11.6 以降 (MC 26.3。逆 Z の書き換えと、本体の中で描くエンチャントの光沢)、`26.1` は Iris 1.10.5〜1.11.x (colortex 32 枚)、`mid` は Iris 1.8〜1.10.4、`1.7.6` は Iris 1.7.x と Oculus です。`validate_shaders.py` は `--env` を省くと 4 つとも検証し、`gl_compile_check.py` と `equiv_check.py` は省くと `latest` だけです
+ローダーは `capabilities.py` の `ENVS` の名前で選びます。`latest` は Iris 1.11.6 以降 (MC 26.3。逆 Z の書き換えと、本体の中で描くエンチャントの光沢)、`dh` は `latest` に Distant Horizons が入った環境 (`dh_terrain` / `dh_water` が読まれる。本文が変わるのは設定 `DH_SUPPORT` を ON にした時だけ)、`26.1` は Iris 1.10.5〜1.11.x (colortex 32 枚)、`mid` は Iris 1.8〜1.10.4、`1.7.6` は Iris 1.7.x と Oculus です。`validate_shaders.py` は `--env` を省くと 5 つとも検証し、`gl_compile_check.py` と `equiv_check.py` は省くと `latest` だけです
 
 どちらも前回成功したプログラムは前処理後の内容が変わっていなければ飛ばします。結果は `tools/.cache/` に保存され、`--no-cache` で全部やり直します
 

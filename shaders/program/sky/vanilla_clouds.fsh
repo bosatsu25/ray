@@ -32,6 +32,8 @@
 #include "/lib/sky/cloud_styles.glsl"
 #include "/lib/sky/clouds.glsl"
 #include "/lib/sky/sky_color.glsl"
+#include "/lib/settings/capabilities.glsl"
+#include "/lib/common/dh.glsl"
 #include "/lib/sky/fog_template.glsl"
 #include "/lib/sky/climate.glsl"
 #include "/lib/sky/fog_styles.glsl"

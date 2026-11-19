@@ -9,6 +9,7 @@
 #define IMG_COLORIMG12
 #define IMG_FOG_HISTORY
 //@include "/lib/common/common.glsl"
+//@include "/lib/common/dh.glsl"
 //@include "/lib/common/temporal.glsl"
 //@include "/lib/buffers/frame_data.glsl"
 //@include "/lib/sky/sky.glsl"
@@ -31,6 +32,9 @@
 #include "/lib/common/math.glsl"
 #include "/lib/common/shading_types.glsl"
 #include "/lib/common/common.glsl"
+#include "/lib/settings/capabilities.glsl"
+#include "/lib/common/transforms.glsl"
+#include "/lib/common/dh.glsl"
 #include "/lib/common/temporal.glsl"
 #include "/lib/buffers/frame_data.glsl"
 #include "/lib/sky/sh.glsl"
@@ -38,7 +42,6 @@
 #include "/lib/common/phase.glsl"
 #include "/lib/buffers/images.glsl"
 #include "/lib/sky/atmosphere.glsl"
-#include "/lib/common/transforms.glsl"
 #include "/lib/common/celestial_shape.glsl"
 #include "/lib/common/noise.glsl"
 #include "/lib/sky/celestial.glsl"
@@ -89,7 +92,6 @@
 #include "/lib/light/trace.glsl"
 #include "/lib/buffers/global_lights.glsl"
 #include "/lib/light/light_select.glsl"
-#include "/lib/settings/capabilities.glsl"
 #include "/lib/light/hand_pose.glsl"
 #include "/lib/light/entity_light.glsl"
 #include "/lib/light/hand_light.glsl"
@@ -134,6 +136,18 @@ void main() {
     vec3 dir = normalize(playerPos);
     // 空は描画距離までフォグを積む (描画距離端で地形が溶ける先と同じ量)
     float dist = isSky ? fogRenderDistance() : length(playerPos);
+#ifdef USE_DH
+    // DH の地形・水がある画素は、その距離までフォグを積む (composite19 と同じ扱い)
+    if (isSky) {
+        float dhDepth = texelFetch(dhDepthTex0, texel, 0).r;
+        if (dhDepth < 1.0) {
+            isSky = false;
+            playerPos = dhScreenToPlayer(vec3(uv, dhDepth));
+            dir = normalize(playerPos);
+            dist = length(playerPos);
+        }
+    }
+#endif
     float dither = blueNoise(texel).g;
 
     vec4 raw = vec4(0.0, 0.0, 0.0, 1.0);

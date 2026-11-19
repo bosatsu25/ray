@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 # 検出の式で使ってよいローダーのマクロ (直接書き禁止の検査もこの名前を見る)
-LOADER_MACROS = ("MC_VERSION", "IRIS_VERSION", "MAX_COLOR_BUFFERS", "IRIS_INLINE_GLINT")
+LOADER_MACROS = ("MC_VERSION", "IRIS_VERSION", "MAX_COLOR_BUFFERS", "IRIS_INLINE_GLINT", "DISTANT_HORIZONS")
 
 
 @dataclass(frozen=True)
@@ -68,6 +68,11 @@ CAPS: list[Cap] = [
     Cap("CAP_INLINE_GLINT", "defined IRIS_INLINE_GLINT",
         "エンチャントの光沢がエンティティ・手のプログラムの中で描かれ、mc_hasGlint() / mc_sampleGlint() が使える",
         "MC 26.3 より前 (光沢は gbuffers_armor_glint で重ねて描かれる)"),
+    # Distant Horizons が入っていて描画が有効な時だけ Iris が定義する (StandardMacros)。dh_terrain / dh_water が読まれ、
+    # DH の深度 (dhDepthTex0 / 1) と投影 (dhProjection) が渡る
+    Cap("CAP_DISTANT_HORIZONS", "defined DISTANT_HORIZONS",
+        "Distant Horizons の遠景が描かれ、dh_terrain / dh_water のプログラムが読まれる",
+        "Distant Horizons が入っていない (dh_* のプログラムは読まれない)"),
 ]
 
 ENTITY_VOXEL_SETTINGS = "defined ENTITY_SHADOWS || defined LIGHT_ENTITY_OCCLUSION || defined LIGHT_PLAYER_OCCLUSION || defined ENTITY_LIGHTS"
@@ -90,6 +95,8 @@ FXS: list[Fx] = [
        "自分を current_player の ID ではなく、プレイヤーの ID と目の位置からの距離で見分ける"),
     Fx("FX_INLINE_GLINT", "defined CAP_INLINE_GLINT",
        "エンチャントの光沢をエンティティ・手のプログラムの中で足す (gbuffers_armor_glint に来ない環境)"),
+    Fx("FX_DISTANT_HORIZONS", "defined DH_SUPPORT && defined CAP_DISTANT_HORIZONS",
+       "Distant Horizons の遠景の地形を G バッファに描き、照明・フォグ・雲で地形として扱う (本体は lib/common/dh.glsl の USE_DH を見る)"),
 ]
 
 
@@ -130,6 +137,12 @@ FEATURES_1_11 = FEATURES_1_7 | {"CAN_DISABLE_WEATHER", "FADE_VARIABLE", "TEXTURE
 PIXEL_TYPES_1_11 = PIXEL_TYPES_1_7 | {"UNSIGNED_INT_10F_11F_11F_REV"}
 
 
+# Iris が DH の頂点の材質の種類 (dhMaterialId) に付ける番号 (StandardMacros.java の DH_BLOCK_*)
+DH_BLOCK_MACROS = {f"DH_BLOCK_{name}": str(i) for i, name in enumerate((
+    "UNKNOWN", "LEAVES", "STONE", "WOOD", "METAL", "DIRT", "LAVA", "DEEPSLATE", "SNOW", "SAND", "TERRACOTTA", "NETHER_STONE", "WATER",
+    "GRASS", "AIR", "ILLUMINATED"))}
+
+
 @dataclass(frozen=True)
 class Env:
     """
@@ -159,6 +172,12 @@ ENVS: list[Env] = [
         features=FEATURES_1_11, pixel_types=PIXEL_TYPES_1_11,
         transforms=frozenset({TRANSFORM_REVERSE_Z, TRANSFORM_INLINE_GLINT}),
         note="Iris 1.11.6 以降 (MC 26.3。逆 Z の書き換えと、本体の中で描くエンチャントの光沢)"),
+    # 最新の Iris に Distant Horizons が入った環境。DH_BLOCK_* は dhMaterialId の値 (Iris の StandardMacros と同じ番号)
+    Env("dh", {"MC_VERSION": "260300", "IRIS_VERSION": "11106", "MAX_COLOR_BUFFERS": "32", "IRIS_INLINE_GLINT": "", "DISTANT_HORIZONS": "",
+               **DH_BLOCK_MACROS}, 32, 12,
+        features=FEATURES_1_11, pixel_types=PIXEL_TYPES_1_11,
+        transforms=frozenset({TRANSFORM_REVERSE_Z, TRANSFORM_INLINE_GLINT}),
+        note="latest + Distant Horizons (dh_terrain / dh_water が読まれる。本文が変わるのは設定 DH_SUPPORT が ON の時だけ)"),
     # MC_VERSION は 26.1.2。1.21.x の Iris 1.10 は火花を不透明で描くので mid と同じ側
     Env("26.1", {"MC_VERSION": "260102", "IRIS_VERSION": "11100", "MAX_COLOR_BUFFERS": "32"}, 32, 12,
         features=FEATURES_1_11, pixel_types=PIXEL_TYPES_1_11,

@@ -58,7 +58,7 @@ Helios 44-2 や Sonnar のようなオールドレンズから、Hologon や Fle
 > OptiFine では動きません。SSBO・カスタムイメージ・compute shader など Iris にしかない機能を前提にしています
 
 > [!NOTE]
-> 現状はまだ Distant Horizons には対応していません (`dh_*` プログラムを持っていません)。入れたままでも Iris は DH 用のシェーダーがないパックとして扱いますが、LOD 部分の見た目は保証できません
+> Distant Horizons への対応は実験的で、既定は OFF です (設定のトップ画面の「Distant Horizons 対応 (実験的)」)。ON にすると遠景の地形と水をこのパックの光・フォグ・空で描きますが、実機ではまだ確かめていません。遠景には影・設置光源・反射が付かず、オーバーワールドだけです。OFF では Distant Horizons 自身の描画のままで、LOD 部分の見た目は保証できません
 
 ### 対応バージョン
 
@@ -353,7 +353,7 @@ uv sync                                   # 初回だけ。.venv/ に Python 3.1
 uv run tools/validate_shaders.py          # Iris の前処理を再現して glslang でコンパイル (既定値・オーバーワールド)
 uv run tools/validate_shaders.py --full   # 既定値を 3 ディメンションで、全プロファイルをオーバーワールドで
 uv run tools/gl_compile_check.py          # 手元の GPU ドライバで compile + link
-uv run tools/validate_shaders.py --env 1.7.6   # ローダーを 1 つだけ (latest / 26.1 / mid / 1.7.6)。指定しないと 4 つとも検証します
+uv run tools/validate_shaders.py --env 1.7.6   # ローダーを 1 つだけ (latest / dh / 26.1 / mid / 1.7.6)。指定しないと 5 つとも検証します
 uv run tools/gl_compile_check.py --env 1.7.6   # 古い Iris と Oculus 向けの本文で compile + link (既定は latest = Minecraft 26.3)
 uv run pytest -q tests                    # tools/ の単体テストとパックの決まりのテスト (GPU もゲームも要りません)
 ```
@@ -486,6 +486,9 @@ flowchart TD
     - [x] パニーニ投影 (左右の端の引き伸ばしを抑える写像) を足す
     - [ ] 実機で見た目を確かめる
 - [ ] Distant Horizons 対応
+  - [x] 設定「Distant Horizons 対応 (実験的)」で、遠景の地形と水を照明・フォグ・雲に組み込む (既定は OFF)
+  - [ ] Distant Horizons を入れた実機で見た目を確かめる
+  - [ ] 遠景の影、反射に映る遠景、ネザーとエンド
 
 ## 支援
 

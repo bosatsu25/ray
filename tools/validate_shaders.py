@@ -332,6 +332,9 @@ def build_source(wrapper: Path, overrides: dict[str, str | bool], options: dict[
     inject += [f"#define IRIS_FEATURE_{f}" for f in features]
     # Iris が本文に差し込む関数 (宣言は先頭、定義は末尾)。無いローダーでは本体が呼ぶとコンパイルが落ちるので、そのまま検出できる
     tail = []
+    # Iris は DH の頂点シェーダーに材質の種類の変数を差し込む (DHTerrainTransformer の injectVertInit)
+    if wrapper.name.startswith("dh_") and wrapper.suffix == ".vsh":
+        inject.append("int dhMaterialId;")
     if TRANSFORM_INLINE_GLINT in env.transforms:
         inject += INLINE_GLINT_DECLS
         tail = INLINE_GLINT_DEFS

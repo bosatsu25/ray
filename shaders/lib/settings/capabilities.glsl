@@ -34,6 +34,11 @@
 #define CAP_INLINE_GLINT 1
 #endif
 
+// Distant Horizons の遠景が描かれ、dh_terrain / dh_water のプログラムが読まれる。無い環境: Distant Horizons が入っていない (dh_* のプログラムは読まれない)
+#if defined DISTANT_HORIZONS
+#define CAP_DISTANT_HORIZONS 1
+#endif
+
 // エンティティを影とボクセルに描く (遮蔽とエンティティの光源)
 #if defined ENTITY_SHADOWS || defined LIGHT_ENTITY_OCCLUSION || defined LIGHT_PLAYER_OCCLUSION || defined ENTITY_LIGHTS
 #define FX_ENTITY_VOXEL 1
@@ -67,6 +72,11 @@
 // エンチャントの光沢をエンティティ・手のプログラムの中で足す (gbuffers_armor_glint に来ない環境)
 #if defined CAP_INLINE_GLINT
 #define FX_INLINE_GLINT 1
+#endif
+
+// Distant Horizons の遠景の地形を G バッファに描き、照明・フォグ・雲で地形として扱う (本体は lib/common/dh.glsl の USE_DH を見る)
+#if defined DH_SUPPORT && defined CAP_DISTANT_HORIZONS
+#define FX_DISTANT_HORIZONS 1
 #endif
 
 #endif // SETTINGS_CAPABILITIES_GLSL

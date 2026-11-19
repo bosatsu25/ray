@@ -15,6 +15,7 @@
 //@include "/lib/common/common.glsl"
 //@include "/lib/common/exposure.glsl"
 //@include "/lib/common/jitter.glsl"
+//@include "/lib/common/dh.glsl"
 //@include "/lib/common/specular_sparkle.glsl"
 //@include "/lib/surface/surface.glsl"
 //@include "/lib/sky/sky.glsl"
@@ -42,6 +43,9 @@
 #include "/lib/buffers/frame_data.glsl"
 #include "/lib/common/exposure.glsl"
 #include "/lib/common/jitter.glsl"
+#include "/lib/settings/capabilities.glsl"
+#include "/lib/common/transforms.glsl"
+#include "/lib/common/dh.glsl"
 #include "/lib/common/color.glsl"
 #include "/lib/common/specular_sparkle.glsl"
 #include "/lib/common/encoding.glsl"
@@ -57,7 +61,6 @@
 #include "/lib/buffers/slots.glsl"
 #include "/lib/surface/gi.glsl"
 #include "/lib/common/noise.glsl"
-#include "/lib/common/transforms.glsl"
 #include "/lib/common/water_waves.glsl"
 #include "/lib/common/water_glitter.glsl"
 #include "/lib/common/water_lod.glsl"
@@ -99,7 +102,6 @@
 #include "/lib/light/trace.glsl"
 #include "/lib/buffers/global_lights.glsl"
 #include "/lib/light/light_select.glsl"
-#include "/lib/settings/capabilities.glsl"
 #include "/lib/light/hand_pose.glsl"
 #include "/lib/light/entity_light.glsl"
 #include "/lib/light/hand_light.glsl"
@@ -233,11 +235,44 @@ void directSpecular(Material m, vec3 N, vec3 V, LightSample L, float slopeVar, f
 const vec2 SPARKLE_TEXEL_PX = vec2(0.3, 0.7);  // 1 テクセルの画素数がこの範囲で 0 -> 1
 const float SPARKLE_TEXEL_SIZE = 1.0 / 16.0;
 
+#ifdef USE_DH
+/*
+ * Distant Horizons の遠景の地形 (dh_terrain が G バッファに書いた画素) の照明
+ * 影マップ・ボクセル・GI のバッファはどれも描画距離の中だけなので、遠景には使えない。影マップの外のバニラの地形と同じ近似で照らす:
+ * 太陽は影なしで、日向かどうかをスカイライトから推定 (SL_SUN_SHADOW_MAP_FALLBACK の影マップの外と同じ式) x 雲影、
+ * 環境光は空の SH x スカイライトと、ブロックライトのバニラのライトマップ相当。鏡面・AO・GI・SSS は無い
+ */
+vec3 shadeDhTerrain(ivec2 texel, vec3 playerPos) {
+    GBufferData g = readGBuffer(texel);
+    Material m = decodeMaterial(g);
+    vec3 V = -normalize(playerPos);
+    SurfacePoint sp = surfacePoint(playerPos, g.normal);
+    sp.geoNormal = g.geoNormal;
+    sp.lightmap = g.lightmap;
+    SurfaceLights L = gatherSurfaceLights(sp, SL_SUN_NONE, SL_BLOCK_NONE, SL_SKY | SL_CELESTIAL);
+    LightSample sun = L.celestial;
+    float sunlit = smoothstep(SHADOW_FALLBACK_SKYLIGHT.x, SHADOW_FALLBACK_SKYLIGHT.y, g.lightmap.y);
+    sun.irradiance *= sunlit * getCloudShadow(playerPos) * sunSkylightGate(g.lightmap.y);
+    vec3 color = evalDirectDiffuse(m, g.normal, V, sun);
+    color += evalDiffuseIrradiance(m, L.sky + blockLightmapFallback(g.lightmap.x) + minAmbientIrradiance());
+    if (g.emission > 0.0) color += g.albedo * g.emission * (getVisibleEmissionLuminance() * EMISSION_STRENGTH);
+    return color;
+}
+#endif
+
 void main() {
     ivec2 texel = ivec2(gl_FragCoord.xy);
     float depth = texelFetch(depthtex0, texel, 0).r;
 
     if (depth >= 1.0) {
+#ifdef USE_DH
+        // バニラの深度では空でも、DH の地形がある画素は地形として照らす。雲はバニラの地形と同じ扱い (手前の雲は composite19 が重ねる)
+        float dhDepth = texelFetch(dhDepthTex0, texel, 0).r;
+        if (dhDepth < 1.0) {
+            outColor = vec4(shadeDhTerrain(texel, dhScreenToPlayer(vec3(removeTaaJitter(texcoord), dhDepth))), 1.0);
+            return;
+        }
+#endif
         vec3 dir = normalize(viewToPlayerDir(screenToView(vec3(texcoord, 1.0))));
         vec3 sky = renderSky(dir, texelFetch(colortex0, texel, 0).rgb);
         vec4 clouds = getCloudLayer(texel);
