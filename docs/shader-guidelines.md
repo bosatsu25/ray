@@ -2,7 +2,7 @@
 
 Ray のシェーダーを書くときに、読み込み (Iris の前処理とドライバのコンパイル・リンク) が速く、描画も速く、NVIDIA 以外でも動く形を選ぶための判断材料をまとめる。リポジトリの決まりは [AGENTS.md](../AGENTS.md)、設計と命名・検証は [architecture.md](architecture.md) の「規約・単位・検証」にあり、ここでは繰り返さない
 
-- Iris の動きは Iris 1.11.4 (Minecraft 26.1.2) のソースで確かめたもの。Iris を更新したら、include の展開・設定の検出・資源の上限が変わっていないか見直す。古い Iris (1.7〜1.10) と Oculus で違う所は `tools/capabilities.py` の表と `validate_shaders.py` のローダー別の検査 (`--env`) で見る
+- Iris の動きは Iris 1.11.4 (Minecraft 26.1.2) のソースで確かめたもの。MC 26.2 / 26.3 で増えた書き換え (逆 Z、エンチャントの光沢) は 26.2 / 26.3 ブランチのソースで確かめ、`tools/capabilities.py` の `TRANSFORM_*` と `tools/iris_transforms.py` にまとめた。Iris を更新したら、include の展開・設定の検出・資源の上限が変わっていないか見直す。古い Iris (1.7〜1.10) と Oculus で違う所は `tools/capabilities.py` の表と `validate_shaders.py` のローダー別の検査 (`--env`) で見る
 - 時間の数値は GTX 1070 (ドライバ 581.57、Windows) での例。描画の時間は 1920x1080 の RGBA16F に全画面で描いて測った。桁と傾向の目安で、GPU が変われば変わる。リンクの時間は同じ条件で 2〜5 倍揺れた
 - 確かめていないことは指針にしていない
 
@@ -157,6 +157,8 @@ Iris (1.11.4、ブランチ 26.1 のソース)
 - パイプラインの作成と compute のバリア: https://github.com/IrisShaders/Iris/blob/26.1/common/src/main/java/net/irisshaders/iris/pipeline/IrisRenderingPipeline.java 、https://github.com/IrisShaders/Iris/blob/26.1/common/src/main/java/net/irisshaders/iris/pipeline/CompositeRenderer.java 、https://github.com/IrisShaders/Iris/blob/26.1/common/src/main/java/net/irisshaders/iris/gl/program/ComputeProgram.java
 - 資源: https://github.com/IrisShaders/Iris/blob/26.1/common/src/main/java/net/irisshaders/iris/gl/IrisLimits.java 、https://github.com/IrisShaders/Iris/blob/26.1/common/src/main/java/net/irisshaders/iris/samplers/IrisSamplers.java 、https://github.com/IrisShaders/Iris/blob/26.1/common/src/main/java/net/irisshaders/iris/shaderpack/properties/ShaderProperties.java
 - ShaderKey: https://github.com/IrisShaders/Iris/blob/26.1/common/src/main/java/net/irisshaders/iris/pipeline/programs/ShaderKey.java
+- 逆 Z の書き換え (1.11.4+26.2 以降): https://github.com/IrisShaders/Iris/blob/26.3/common/src/main/java/net/irisshaders/iris/pipeline/transform/transformer/DepthTransformer.java
+- エンチャントの光沢の差し込み (1.11.6+26.3 以降): https://github.com/IrisShaders/Iris/blob/26.3/common/src/main/java/net/irisshaders/iris/pipeline/transform/transformer/GlintTransformer.java 、頂点形式 (`at_midBlock` の正規化): https://github.com/IrisShaders/Iris/blob/26.3/common/src/main/java/net/irisshaders/iris/vertices/IrisVertexFormats.java
 - 機能の文書: https://github.com/IrisShaders/ShaderDoc/blob/master/iris-features.md 、https://github.com/IrisShaders/ShaderDoc/blob/master/passes/compute.md
 - デバッグオプション: https://github.com/IrisShaders/Iris/blob/trunk/docs/usage/debugging.md
 

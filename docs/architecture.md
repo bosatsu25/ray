@@ -2,7 +2,7 @@
 
 独自 Minecraft シェーダーパック Ray の設計。`shaders/` のパイプライン・バッファ・ID・モジュール構成と、各手法の選定理由を説明する。
 
-- 対象: Iris 1.7.x (Minecraft 1.20.1) 〜 Iris 1.11.x (Minecraft 26.1)、Oculus 1.8.0 (Forge 1.20.1)。OptiFine 非対応 (SSBO・カスタムイメージ・compute・`currentRenderedItemId` を前提)。Oculus はコンパイルとリンクの確認だけで、実機では読み込んでいない。1.20.1 は Iris 1.7.6 + Sodium 0.5.13 で実機確認済み
+- 対象: Iris 1.7.x (Minecraft 1.20.1) 〜 Iris 1.11.x (Minecraft 26.3。26.2 以降は実機では未確認)、Oculus 1.8.0 (Forge 1.20.1)。OptiFine 非対応 (SSBO・カスタムイメージ・compute・`currentRenderedItemId` を前提)。Oculus はコンパイルとリンクの確認だけで、実機では読み込んでいない。1.20.1 は Iris 1.7.6 + Sodium 0.5.13 で実機確認済み
 - ローダーの差は能力 (`CAP_*`) と機能 (`FX_*`) の表 (`tools/capabilities.py`、生成物は `lib/settings/capabilities.glsl`) で吸収し、本体は `FX_*` だけを見る。新しい Iris ではどの分岐もコンパイルで外れる
 - GLSL: gbuffers / composite 系は `#version 460 compatibility`、compute は `#version 460`
 - 画質優先 + 9 段階プリセット (LOW / MEDIUM / HIGH_FASTEST / HIGH_FAST / HIGH / ULTRA / EXTREME_LITE / EXTREME_BALANCED / EXTREME, 軽い順)。素の既定値 = HIGH
@@ -804,14 +804,16 @@ uv run tools/gl_compile_check.py --full      # 同上を既定値 x 3 ディメ�
 # キャッシュ (tools/.cache/) を無視するのは --no-cache
 uv run tools/gen_wrappers.py --check         # プログラム本体とラッパー、program.*.enabled の生成の対応
 uv run tools/gen_capabilities.py --check     # ローダーの能力と機能の生成物が最新か
-uv run tools/validate_shaders.py --env 1.7.6 # ローダーを 1 つだけ (latest / mid / 1.7.6。指定しないと 3 つとも検証する)
+uv run tools/validate_shaders.py --env 1.7.6 # ローダーを 1 つだけ (latest / 26.1 / mid / 1.7.6。指定しないと 4 つとも検証する)
 uv run tools/gl_compile_check.py --env 1.7.6 # 同じ本文を実機のドライバで (既定は latest)
+uv run pytest -q tests                       # tools/ の単体テストとパックの不変条件 (tests/)
 uv run tools/check_slots.py --intervals --all # colortex の論理名の区間の外の読み書き (validate_shaders.py --full は既定値 x 3 ディメンションを見る)
 ```
 
 validate_shaders.py は include 展開・設定差し替え・Iris マクロ注入をしてからコンパイルし、エラーを元ファイルの行番号で表示する。
 静的チェック: プロファイルの値の妥当性、HIGH = 既定値、screen と lang の網羅、workGroups のリテラル性、`*.properties` が ASCII だけか、block/item の状態値にカンマ区切りが無いか、ラッパーと `program.*.enabled` の生成が最新か、能力と機能の生成物 (`gen_capabilities.py`) が最新か。
-ローダーごとの検査: `tools/capabilities.py` の `ENVS` (latest = Iris 1.10.5 以降 / mid = Iris 1.8〜1.10.4 / 1.7.6 = Iris 1.7.x と Oculus) ごとにマクロを変えてコンパイルし、`tools/loader_checks.py` が、そのローダーで読み込めない記述 (flag、`bufferObject` の添字 (latest 12、mid と 1.7.6 は 8)、image の数と pixel type・format、`RENDERTARGETS` のカンマの後の空白)、colortex の上限を超える使用 (mid と 1.7.6 は 16 枚、latest は 32 枚。実際はどのローダーでも colortex0〜15 だけを使い、16 以上は失敗)、`MC_VERSION` / `IRIS_VERSION` / `MAX_COLOR_BUFFERS` の生成物の外での使用を調べる。
+ローダーごとの検査: `tools/capabilities.py` の `ENVS` (latest = Iris 1.11.6 以降と MC 26.3 / 26.1 = Iris 1.10.5〜1.11.x / mid = Iris 1.8〜1.10.4 / 1.7.6 = Iris 1.7.x と Oculus) ごとにマクロを変えてコンパイルし、`tools/loader_checks.py` が、そのローダーで読み込めない記述 (flag、`bufferObject` の添字 (latest 12、mid と 1.7.6 は 8)、image の数と pixel type・format、`RENDERTARGETS` のカンマの後の空白)、colortex の上限を超える使用 (mid と 1.7.6 は 16 枚、latest と 26.1 は 32 枚。実際はどのローダーでも colortex0〜15 だけを使い、16 以上は失敗)、`MC_VERSION` / `IRIS_VERSION` / `MAX_COLOR_BUFFERS` / `IRIS_INLINE_GLINT` の生成物の外での使用を調べる。
+Iris の書き換えの検査: `tools/iris_transforms.py` が、Iris が本文に掛ける書き換え (`ENVS` の `transforms`) が効かない書き方を探す。逆 Z (Iris 1.11.4+26.2 以降) では、マクロを展開した本文で深度のサンプラーの使い方を辿り、Iris が `1.0 - 値` を挿せない使い方 (`sampler2D` 以外での宣言、引数が `sampler2D` でない関数に渡す、`gl_FragDepth` の単純な代入以外) を報告する。`iris_`・`irisMain`・`moj_import` で始まる名前と、Iris が定義を差し込む `mc_hasGlint` / `mc_sampleGlint` の定義も報告する。MC 26.3 の本文では Iris と同じく `mc_hasGlint()` / `mc_sampleGlint()` を差し込んでからコンパイルする。
 
 gl_compile_check.py は同じ前処理結果を不可視ウィンドウの OpenGL 4.6 compatibility コンテキストで実際にコンパイル・リンクする (glfw + PyOpenGL)。
 glslang が通しても実ドライバで落ちるもの (NVIDIA の image uniform 8 個制限 `C7624`、予約語 `packed` 等) を検出し、info log を元ファイルの行番号で表示する。
@@ -829,6 +831,10 @@ shaders.properties の `#if` を評価して `program.*.enabled = false` のプ�
 - 影・GI・反射: 水の後ろのガラスが手前に見える。半透明越しの環境反射は空のみ。RSM に可視性はない。F82 は未実装。自動法線は地形とエンティティと手持ち (植物は対象外)
 - ポスト: TAAU は見送り (Iris では gbuffers の解像度を下げられない)
 - エンティティのボクセル化は `shadow_entities` / `shadow_block` (Iris 1.8 未満と Oculus では shadow.gsh) で行う。影パスの距離 (`entityShadowDistanceMul`) とフラスタムの外のエンティティは遮蔽物にならない
+- MC 26.2 / 26.3 (Iris 1.11.4 以降) は実機で読み込んでいない。Iris のソース (26.2 / 26.3 ブランチ) と突き合わせ、検証を 26.3 のマクロと差し込みで通しただけ
+  - 逆 Z: MC 26.2 から深度が逆 Z になり、Iris が深度の読み出し・`gl_FragCoord.z`・`gl_Position.z` を書き換えて順 Z に見せる (DepthTransformer)。行列の uniform は順 Z のまま届くので、本体は変えていない。深度は `1.0 - 値` で届くので、遠景の精度は float の 1.0 付近の刻み (24bit 相当) になる
+  - エンチャントの光沢: MC 26.3 は光沢を重ね描きにせず、エンティティ・手の描画の中で足す。`FX_INLINE_GLINT` で gbuffers_entities / gbuffers_hand はアルベドに、gbuffers_entities_translucent / gbuffers_hand_water は発光として足す。明るさは重ね描きの時の式に合わせただけで、実機で見比べていない
+  - `at_midBlock`: 26.3 は正規化した形式 (SNORM) で持ち、Iris が 127 倍して戻す。発光レベルは四捨五入で整数にしている (`voxelizeTerrainVertex`)
 - 古い Iris (1.7.x、MC 26.1 未満、Oculus) の違い。新しい Iris ではどれもコンパイルで外れる。Oculus はコンパイルとリンクの確認だけで、実機では読み込んでいない
   - 影のパスにエンティティが来る (専用の影のパスが無い、Iris 1.8 未満と Oculus): 地形も shadow.gsh を通る (`FX_SHADOW_NON_TERRAIN`)。重さは測っていない
   - 花火の火花が不透明の粒で来る (MC 26.1 未満): 画素の間引きと TAA で光らせる (`FX_SPARKS_IN_PARTICLES`)。頂点色が真っ白の花火 (コマンドで成分 1.0 の色にしたもの) は炎・溶岩の粒と区別できず光らない。染料の白の花火は光る
@@ -842,4 +848,5 @@ shaders.properties の `#if` を評価して `program.*.enabled = false` のプ�
 - DH / Voxy / Photonics 連携は未対応。DH を入れていると Iris は「DH シェーダーなし」として扱う (LOD の見た目は保証しない)
 - Iris 26.1 は半透明エンティティ (プレイヤーのスキン・マネキン・文字・旗の模様等) を deferred の後 (`renderTranslucentFeatures`) に gbuffers_entities_translucent / gbuffers_block_translucent で描く。G バッファ経路のフォールバック (gbuffers_entities) だと deferred30 で照明されず消えるので、両者は半透明の前方シェーディング (`program/surface/gbuffers_translucent.*`) で用意した。速度は書かず深度再投影に任せる (並べ替えで at_velocity が使えないため)。画面空間の影 (手持ち光源の SS 影等) には写らないので、三人称の自分の影は手持ち光源のボクセル DDA で落とす。この層は水より先に描かれ、水の合成が水の中の自分を水面の上に重ねるので、カメラが水の上の時は、水面より下の自分の画素を捨て、composite1 (`water_trace.fsh`) が屈折した視線を自分の三角形 (光源シャドウ用に影のパスで持っている) に当てて、三角形ごとの平均の色を当たった点で照らして描く (屈折・波の揺れ・水の吸収が付く。一人称は体を描かないので当てない)。三角形を持たない設定 (LIGHT_OCCLUSION_MODE 0 か LIGHT_PLAYER_OCCLUSION OFF か屈折なし) では、捨てずに水の吸収と内散乱だけを掛ける (`lib/surface/water_self.glsl`。水面の高さはボクセルの水のブロックから)。上に水のある水のセルは面が描かれずボクセルに空気として残るので、空気は上に水がある限り水とみなして水面まで辿る。足のあるセルだけは水の入ったハーフブロック・階段などでも上の水を探す。三角形の当たりは捨てる判定と同じ関数で確かめ、捨てた所だけ描く (水面のすぐ下の帯などで二重にならない)。乗り物に乗っている間 (`isRiding`) は捨てない (ボートの中は水を描かず、捨てた脚が消える)。一番上の水が流れる水 (上面が水源より低い) の時も捨てない (高さが分からず、水面より上の体を捨てると欠ける。屈折は付かない)。カメラが水の中の時は逆に、水面より上の自分の画素を捨てる (この層に残すと水面の手前に貼り付き、水の中の色と霧が掛かり、スネルの窓の外でも見える)。composite1 が水面の上へ屈折した視線を三角形に当てて水面越しに描き、全反射の画素は反射した視線を水の中の体に当てて鏡面の映り込み (TEX_WATER_MIRROR、giRawImg を composite1 -> 2 の間だけ借りる) に重ねる (自分は画面の像に無く SSR では映らない。SSR の当たりが体より手前ならそちら。REFLECTIONS 0 では映らない)。高さは真下へ空気のセルを辿った最初の水のセルの水面からで、流れる水・足場のブロックの上・乗り物の中は対象外。ガラス・氷・ほかの半透明の物越しに見た水の中の自分は欠ける (一番手前の半透明が水でない画素は composite1 が三角形を当てず、水の画素も無い。直すには半透明の層の下の水にも三角形を当てる必要があり重い)
 - gbuffers_item は未用意 (gbuffers_entities にフォールバック)
+- Linux は実機で読み込んでいない。Mesa のソフトウェア描画 (llvmpipe) で全プログラムの compile + link が通ることだけを CI で確かめている (`.github/workflows/validate.yml` の mesa-link)。Mesa は宣言だけで定義の無い関数の呼び出しを、呼ばれない関数の中でもリンクで落とす
 - macOS (compute 非対応) は動かない

@@ -49,7 +49,7 @@ Ghost color and shape, distortion, vignetting, bokeh shape, and chromatic aberra
 | Minecraft | Java Edition 1.20.1 - 26.x |
 | Shader loader | Iris 1.7 or later (with Sodium). See "Supported Versions" below for the versions |
 | OpenGL | 4.6 (the shaders are GLSL 4.60 and use compute shaders / SSBOs / custom images) |
-| OS | Developed and tested on Windows only. macOS does not work because compute shaders are not available there |
+| OS | Developed and tested on Windows only. On Linux, only compile and link on Mesa are checked in CI, and it has not been tested on real hardware. macOS does not work because compute shaders are not available there |
 | GPU | The required performance has not been measured yet |
 
 > [!IMPORTANT]
@@ -67,6 +67,7 @@ One zip supports the following loaders
 | Iris 1.7.x | 1.20.1 | Checked in the game with Iris 1.7.6 + Sodium 0.5.13 |
 | Iris 1.8 - 1.10 | 1.21.x | Compile validation only |
 | Iris 1.11.x | 26.1 | Checked in the game (26.1.2) |
+| Iris 1.11.4 and later | 26.2 - 26.3 | Only checked against the Iris source and by compile validation. It has not been loaded in the game yet |
 | Oculus 1.8.0 (Forge) | 1.20.1 | Only compile and link have been checked. It has not been loaded in the game |
 
 Older Iris versions differ from newer ones in the following ways (newer Iris versions do not show them)
@@ -428,6 +429,15 @@ Handheld lights are not added to the floodfill, so that they are not counted twi
 - [ ] Public release and distribution
   - [ ] Measure the GPU performance needed for each preset
   - [ ] Test on Linux
+    - [x] Compile and link every program on Mesa (llvmpipe) in CI
+    - [ ] Load it on real hardware (AMD / Intel / NVIDIA) and check the look
+  - [ ] Test on Minecraft 26.2 / 26.3 (Iris 1.11.4 and later)
+    - [x] Check against the Iris source and support the reverse-Z rewrite and the enchantment glint
+    - [ ] Load it in the game and check the look
+- [ ] Automated tests
+  - [x] Unit tests for the tools and invariants of the pack (`tests/`)
+  - [x] Static checks for code that the Iris rewrites cannot handle
+  - [ ] Capture fixed scenes and compare the images automatically
 - [ ] Light source issues
   - [ ] Reduce flickering in places crowded with light sources (a light bin holds at most 64 lights, and lights outside the top picks are chosen by probability every frame. Add temporal reuse)
   - [ ] Add light source shadows to translucent surfaces (they are currently lit only by floodfill, so they are dark)

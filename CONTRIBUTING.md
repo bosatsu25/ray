@@ -41,9 +41,10 @@ Python の環境は [uv](https://docs.astral.sh/uv/) で管理しています。
 uv sync
 uv run tools/validate_shaders.py          # 既定値・オーバーワールド
 uv run tools/validate_shaders.py --full   # 設定やプロファイルを変えたとき
+uv run pytest -q tests                    # tools/ の単体テストとパックの不変条件
 ```
 
-GitHub Actions も同じ検証を回します。実機のドライバでの確認 (`tools/gl_compile_check.py`) と見た目の確認は GPU が要るので、手元で行ってください
+GitHub Actions も同じ検証とテストを回し、Mesa のソフトウェア描画 (llvmpipe) で compile + link も確かめます。NVIDIA など実機のドライバでの確認 (`tools/gl_compile_check.py`) と見た目の確認は GPU が要るので、手元で行ってください
 
 シェーダーの書き方の決まりは [docs/shader-guidelines.md](docs/shader-guidelines.md) と [docs/architecture.md](docs/architecture.md) にあります。生成物 (`world*/`、`block.properties` など) は手で編集せず、`tools/` のスクリプトで作り直してください
 

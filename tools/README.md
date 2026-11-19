@@ -43,7 +43,8 @@ uv sync
 
 | スクリプト | 内容 |
 |---|---|
-| `validate_shaders.py` | Iris の前処理 (include の展開、設定値の差し替え、Iris が注入するマクロ) を再現して glslang でコンパイルし、エラーを元ファイルの行番号で表示します。プロファイルの値、「高」プロファイルと既定値の一致、設定画面と lang の過不足、`*.properties` が ASCII だけか、`//@include` の宣言の漏れ・循環・ガード名と `gen_includes.py` の生成が最新か、も確認します。ローダー (`capabilities.py` の `ENVS`: 最新の Iris / Iris 1.8〜1.10.4 / Iris 1.7 と Oculus) ごとにマクロを変えてコンパイルし、`tools/loader_checks.py` で、そのローダーで読み込めない記述 (flag、`bufferObject` の添字、image の数と形式、`RENDERTARGETS` のカンマの後の空白)、colortex の上限を超える使用 (失敗。どのローダーでも colortex0〜15)、`MC_VERSION` / `IRIS_VERSION` / `MAX_COLOR_BUFFERS` の生成物の外での使用を調べます |
+| `validate_shaders.py` | Iris の前処理 (include の展開、設定値の差し替え、Iris が注入するマクロ) を再現して glslang でコンパイルし、エラーを元ファイルの行番号で表示します。プロファイルの値、「高」プロファイルと既定値の一致、設定画面と lang の過不足、`*.properties` が ASCII だけか、`//@include` の宣言の漏れ・循環・ガード名と `gen_includes.py` の生成が最新か、も確認します。ローダー (`capabilities.py` の `ENVS`: MC 26.3 の Iris / Iris 1.10.5〜1.11.x / Iris 1.8〜1.10.4 / Iris 1.7 と Oculus) ごとにマクロを変えてコンパイルし、`tools/loader_checks.py` で、そのローダーで読み込めない記述 (flag、`bufferObject` の添字、image の数と形式、`RENDERTARGETS` のカンマの後の空白)、colortex の上限を超える使用 (失敗。どのローダーでも colortex0〜15)、`MC_VERSION` / `IRIS_VERSION` / `MAX_COLOR_BUFFERS` の生成物の外での使用を調べます |
+| `iris_transforms.py` | Iris が本文に掛ける書き換えが効かない書き方を探します (`validate_shaders.py` から呼ばれます)。MC 26.2 以降の逆 Z では、Iris は深度のサンプラー (`depthtex0`〜`2`) の読み出しを名前で探して `1.0 - 値` に変えるので、マクロを展開した本文で使い方を辿り、変えられない使い方 (`sampler2D` 以外での宣言、引数が `sampler2D` でない関数に渡す、`gl_FragDepth` の単純な代入以外) を報告します。`iris_`・`irisMain`・`moj_import` で始まる名前と、Iris が定義を差し込む `mc_hasGlint` / `mc_sampleGlint` の定義も報告します |
 | `include_deps.py` | `shaders/lib` と `shaders/program` の各ファイルが使う記号 (関数・const・struct・uniform・SSBO・マクロ) の定義元を、そのファイルの `//@include` の宣言から辿れるかを調べます。lib に `#include` の行がないこと、本体の `#include` が生成ブロックの中にだけあることなど、宣言の書き方も確認します。`-v` でファイルごとの不足を表示します。validate_shaders.py からも呼ばれます |
 | `check_slots.py` | `shaders/lib/buffers/slots.glsl` の colortex の論理名 (時間で分け合う枠と番号を移す枠) を調べます。区間の書式と重なり、名前の付いた枠を本体が `colortexN` と直接書いていないかを見ます (validate_shaders.py からも呼ばれます)。`--intervals` では glslang で各プログラムの読み書きを調べ、区間の外で使っていないかを見ます (`--all` で代表の設定の組と全プロファイル。既定値 x 3 ディメンションは `validate_shaders.py --full` も見ます) |
 | `gl_compile_check.py` | 同じ前処理の結果を、見えないウィンドウの OpenGL 4.6 compatibility コンテキストで手元の GPU ドライバに compile + link させます。glslang では出ないドライバ固有のエラーと、image / sampler / SSBO / shared メモリの使用数が上限を超えていないかを調べます。ローダーは `--env` (`capabilities.py` の `ENVS` の名前。既定は最新) で選び、`equiv_check.py` も同じです |
@@ -81,7 +82,7 @@ uv run tools/gen_capabilities.py --check            # 能力と機能の生成�
 uv run tools/check_slots.py --intervals --all       # colortex の論理名の区間の外の使用
 ```
 
-ローダーは `capabilities.py` の `ENVS` の名前で選びます。`latest` は Iris 1.10.5 以降 (colortex 32 枚)、`mid` は Iris 1.8〜1.10.4、`1.7.6` は Iris 1.7.x と Oculus です。`validate_shaders.py` は `--env` を省くと 3 つとも検証し、`gl_compile_check.py` と `equiv_check.py` は省くと `latest` だけです
+ローダーは `capabilities.py` の `ENVS` の名前で選びます。`latest` は Iris 1.11.6 以降 (MC 26.3。逆 Z の書き換えと、本体の中で描くエンチャントの光沢)、`26.1` は Iris 1.10.5〜1.11.x (colortex 32 枚)、`mid` は Iris 1.8〜1.10.4、`1.7.6` は Iris 1.7.x と Oculus です。`validate_shaders.py` は `--env` を省くと 4 つとも検証し、`gl_compile_check.py` と `equiv_check.py` は省くと `latest` だけです
 
 どちらも前回成功したプログラムは前処理後の内容が変わっていなければ飛ばします。結果は `tools/.cache/` に保存され、`--no-cache` で全部やり直します
 
@@ -109,6 +110,35 @@ uv run tools/check_slots.py --intervals --all       # colortex の論理名の�
 | `--time` | 検証の代わりに、プログラムごとのコンパイル時間を Iris と同じく 1 つずつ測ります。ドライバのキャッシュに当たらないよう、毎回違う `#define` を足します。`--reps N` で N 回測って中央値にします |
 | `--asm` | リンク後の NV のアセンブリの行・一時変数・ループの数を表示します (`--time` なしならアセンブリだけ)。時間は他の負荷で揺れますが、行数は揺れないので、変更の前後の比較に向きます。`--all-stages` で頂点・ジオメトリも数えます |
 | `--ray [PATH]` | 既定値の代わりに保存した設定 (`Ray.txt`) で検証・計測します。PATH を省くと `$RAY_MC_DIR/shaderpacks/Ray.txt` |
+
+## テスト
+
+`tests/` に、`tools/` の単体テストとパックの不変条件のテストがあります (pytest)。GPU もゲームも要らず、4 コアで約 30 秒です。glslang が要るテストは、見つからなければ skip します
+
+```powershell
+uv run pytest -q tests
+uv run pytest -q tests -k glint     # 名前で絞る
+```
+
+| ファイル | 見るもの |
+|---|---|
+| `test_cpp.py` | `#if` の式の評価と、前処理の後に残る行 (`lib/cpp.py`) |
+| `test_capabilities.py` | ローダーごとの能力の表 (どのローダーでどの `CAP_*` が立つか)、能力の検出が未定義のマクロで「能力なし」に倒れること、生成物が最新か |
+| `test_loader_checks.py` | ローダーの上限 (flag、`bufferObject` の添字、image の数と形式、colortex) と `RENDERTARGETS` の書式の検出 |
+| `test_iris_transforms.py` | Iris の逆 Z の書き換えが効かない書き方と、予約された名前の検出 (通る例と落ちる例) |
+| `test_pack.py` | 生成物がどれも最新か、`*.properties` が ASCII か、lang の過不足、ローダーごとの本文 (26.3 だけがエンチャントの光沢を本体の中で足す)、宣言だけで定義の無い関数を呼んでいないか (Mesa でリンクが落ちる) |
+
+検査を足したら、通る例と落ちる例をここに足してください。ゲームを起動しないと分からなかった不具合は、原因を静的に見分けられるなら検査にして残します
+
+### Mesa で compile + link する (Linux)
+
+GPU の無い Linux でも、Mesa のソフトウェア描画 (llvmpipe) で `gl_compile_check.py` を回せます。Linux の AMD / Intel のドライバは Mesa なので、ここで落ちる本文は実機の Linux でも読み込めません。CI (`.github/workflows/validate.yml` の mesa-link) も同じ手順です
+
+```bash
+MESA_GL_VERSION_OVERRIDE=4.6COMPAT MESA_GLSL_VERSION_OVERRIDE=460 xvfb-run -a uv run tools/gl_compile_check.py
+```
+
+llvmpipe が名乗る OpenGL は 4.5 までなので、環境変数で 4.6 compatibility として作らせます。既定値・world0 で約 30 秒、`--full` は 5 分ほどです。NVIDIA 固有の上限 (image uniform 8 個など) は見られないので、実機のドライバでの確認の代わりにはなりません
 
 ## リファクタの前後を比べる
 
