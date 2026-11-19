@@ -127,3 +127,45 @@ def test_stratified_has_less_temporal_error_than_independent():
     assert mid_str < 0.85 * mid_ind
     many_ind, many_str = _rms_error(count=60, window=16, trials=300, seed=5)
     assert many_str < 1.1 * many_ind
+
+
+def _reuse_vs_independent(count: int, cap: int, frames: int, seed: int) -> tuple[float, float, float]:
+    """
+    前のフレームで選んだ光源を引き継ぐ再利用 (時間方向だけのリザーバの合成。可視率を重みに掛けて保存し、1 / M で正規化する) と、
+    毎フレーム独立に選ぶ方法を比べる。戻り値は (独立の誤差, 再利用の誤差, 再利用の偏り)。誤差は 16 フレームの平均の RMS / 重みの和
+    """
+    rng = np.random.default_rng(seed)
+    weights = rng.random(count) ** 2 + 0.05
+    visible = (rng.random(count) < 0.5).astype(float)
+    total, truth = weights.sum(), (weights * visible).sum()
+    picks = np.searchsorted(np.cumsum(weights) / total, rng.random(frames))
+    independent = total * visible[picks]
+    reuse = np.zeros(frames)
+    kept, kept_w, kept_m = -1, 0.0, 0
+    for f in range(frames):
+        fresh = picks[f]
+        a = total
+        b = weights[kept] * kept_w * kept_m if kept >= 0 else 0.0
+        chosen = kept if rng.random() * (a + b) < b else fresh
+        m = 1 + kept_m
+        w = (a + b) / (m * weights[chosen])
+        reuse[f] = weights[chosen] * w * visible[chosen]
+        kept, kept_w, kept_m = chosen, w * visible[chosen], min(m, cap)
+    window = frames // 16 * 16
+    rms = lambda x: float(np.sqrt(np.mean((x[:window].reshape(-1, 16).mean(1) - truth) ** 2)) / total)  # noqa: E731
+    return rms(independent), rms(reuse), float((reuse.mean() - truth) / total)
+
+
+def test_temporal_reuse_alone_is_unbiased_but_noisier_after_the_denoiser():
+    """
+    なぜ時間方向の再利用を入れていないかの記録。期待値は合うが、同じ光源が何フレームも続けて選ばれるので、
+    後段のデノイズ (時間方向の平均) に入る独立な標本が減り、16 フレームの平均の誤差は独立に選ぶより大きくなる
+    画素の間で標本を回す再利用 (ReSTIR の空間方向) と組にしないと得にならない
+    """
+    for count in (12, 60):
+        results = [_reuse_vs_independent(count, cap=8, frames=3200, seed=s) for s in range(6)]
+        independent = np.mean([r[0] for r in results])
+        reuse = np.mean([r[1] for r in results])
+        bias = np.mean([r[2] for r in results])
+        assert abs(bias) < 0.03
+        assert reuse > 1.3 * independent

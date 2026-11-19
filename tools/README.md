@@ -129,7 +129,7 @@ uv run pytest -q tests -k glint     # 名前で絞る
 | `test_loader_checks.py` | ローダーの上限 (flag、`bufferObject` の添字、image の数と形式、colortex) と `RENDERTARGETS` の書式の検出 |
 | `test_iris_transforms.py` | Iris の逆 Z の書き換えが効かない書き方と、予約された名前の検出 (通る例と落ちる例) |
 | `test_docs.py` | 日本語と英語の README の食い違い (ロードマップ、対応バージョンの表)、README の品質プリセットの表がプリセットの定義と合っているか、ローダーの名前がどの文書にも載っているか |
-| `test_light_pick.py` | 光源のくじ (`LIGHT_PICK_STRATIFIED`) と同じ手順を Python で書いて、期待値が変わらないことと、時間平均のばらつきが独立の乱数より小さいことを確かめます |
+| `test_light_pick.py` | 光源のくじ (`LIGHT_PICK_STRATIFIED`) と同じ手順を Python で書いて、期待値が変わらないことと、時間平均のばらつきが独立の乱数より小さいことを確かめます。前のフレームから引き継ぐ再利用が、デノイズと合わせると逆効果になることの記録も入っています |
 | `test_gl_lens.py` | レンズの再投影 (`lensProjectUv` / `lensForwardUv`) を `pass_preview.py` で実際に描いて、往復の誤差、パニーニ投影の四隅と縦線、前からある魚眼・歪曲の往復を確かめます。OpenGL のコンテキストが要るので、`DISPLAY` が無ければ skip します (Mesa での回し方は下) |
 | `test_scene_tools.py` | `bench_presets.py` のプリセットの展開と、`scene_regress.py` の判定と画像の比較 |
 | `test_pack.py` | 生成物がどれも最新か、`*.properties` が ASCII か、lang の過不足、ローダーごとの本文 (26.3 だけがエンチャントの光沢を本体の中で足す)、宣言だけで定義の無い関数を呼んでいないか (Mesa でリンクが落ちる) |
