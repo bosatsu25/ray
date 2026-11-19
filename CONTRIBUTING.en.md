@@ -41,9 +41,10 @@ The Python environment is managed with [uv](https://docs.astral.sh/uv/). See [to
 uv sync
 uv run tools/validate_shaders.py          # default settings, overworld
 uv run tools/validate_shaders.py --full   # when you change settings or profiles
+uv run pytest -q tests                    # unit tests for tools/ and invariants of the pack
 ```
 
-GitHub Actions runs the same validation. Checking with a real driver (`tools/gl_compile_check.py`) and checking the look need a GPU, so do them locally
+GitHub Actions runs the same validation and tests, and also compiles and links the shaders on Mesa's software renderer (llvmpipe). Checking with a real driver such as NVIDIA (`tools/gl_compile_check.py`) and checking the look need a GPU, so do them locally
 
 The coding rules are in [docs/shader-guidelines.md](docs/shader-guidelines.md) and [docs/architecture.md](docs/architecture.md) (in Japanese). Do not edit generated files (`world*/`, `block.properties`, and so on) by hand. Regenerate them with the scripts in `tools/`
 

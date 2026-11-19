@@ -18,7 +18,6 @@ jobs:
           enable-cache: true
 
       # ローカルの検証と同じ版に固定する
-      # GPU が無いので glslang による検証だけを回す (gl_compile_check.py は手元の GPU 専用)
       - name: Install glslang
         run: |
           curl -fsSL -o glslang.zip https://github.com/KhronosGroup/glslang/releases/download/16.6.0/glslang-16.6.0-linux-x86_64-release.zip
@@ -28,8 +27,53 @@ jobs:
 
       - run: uv sync --frozen
 
+      # tools/ の単体テストとパックの不変条件 (tests/)。4 コアで約 30 秒
+      - name: Unit tests
+        timeout-minutes: 5
+        run: uv run pytest -q tests
+
       # 既定値・world0 の簡易チェックだけにする (--full は手元で回す。4 コアで約 6 分)
-      # 4 コアで約 30 秒。止まったときに数時間待たないよう打ち切る
+      # 全ローダー (capabilities.py の ENVS) で 4 コアで約 40 秒。止まったときに数時間待たないよう打ち切る
       - name: Validate shaders
         timeout-minutes: 5
         run: uv run tools/validate_shaders.py
+
+  # glslang が通してもドライバが落とす本文を、Mesa のソフトウェア描画 (llvmpipe) の compile + link で拾う
+  # Linux の AMD / Intel のドライバは Mesa なので、ここで落ちる本文は実機の Linux でも読み込めない
+  # (宣言だけで定義の無い関数の呼び出しなど。NVIDIA は呼ばれない関数の中なら通す)
+  mesa-link:
+    runs-on: ubuntu-latest
+    env:
+      # llvmpipe が名乗るのは 4.5 まで。パックは #version 460 compatibility なので 4.6 として作らせる
+      MESA_GL_VERSION_OVERRIDE: 4.6COMPAT
+      MESA_GLSL_VERSION_OVERRIDE: "460"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Mesa and Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libglx-mesa0 libxrandr2 libxinerama1 libxcursor1 libxi6
+
+      - name: Install glslang
+        run: |
+          curl -fsSL -o glslang.zip https://github.com/KhronosGroup/glslang/releases/download/16.6.0/glslang-16.6.0-linux-x86_64-release.zip
+          unzip -q glslang.zip -d glslang
+          chmod +x glslang/bin/*
+          echo "RAY_GLSLANG=$PWD/glslang/bin/glslang" >> "$GITHUB_ENV"
+
+      - run: uv sync --frozen
+
+      # 既定値・world0。最新の Iris (26.3) の本文と、いちばん分岐の多い古いローダーの本文
+      - name: Link on Mesa (latest)
+        timeout-minutes: 10
+        run: xvfb-run -a uv run tools/gl_compile_check.py --no-cache
+
+      - name: Link on Mesa (Iris 1.7 / Oculus)
+        timeout-minutes: 10
+        run: xvfb-run -a uv run tools/gl_compile_check.py --no-cache --env 1.7.6

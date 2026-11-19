@@ -8,6 +8,7 @@ Iris 向け Minecraft シェーダーパック Ray のリポジトリ。人間�
   - `world0/`, `world-1/`, `world1/`: ディメンションと本体のマクロを定義して本体を include するだけのラッパー。手で編集せず `uv run tools/gen_wrappers.py` で生成する (`shaders.properties` の `BEGIN GENERATED program enables` の間も同じ。プログラムを止める条件は `DISABLED` の表に足す)
   - `lib/settings.glsl`: 設定の入口。設定の定義は `lib/settings/` に lib のモジュールごとのファイルで書く。素の既定値は「高」(HIGH) プロファイルと一致させる。`lib/settings/bool_refs.glsl` は `uv run tools/gen_settings.py` で生成する
 - `tools/`: 生成・検証・ゲーム内デバッグのスクリプト ([tools/README.md](tools/README.md))
+- `tests/`: `tools/` の単体テストと、パックの不変条件のテスト (pytest)。検査を足したら、通る例と落ちる例をここに足す
 - `docs/`: 設計資料
 
 ## 変更したら必ず検証する
@@ -18,8 +19,9 @@ Python は uv で管理している (`pyproject.toml`, `uv.lock`)。最初に `u
 uv run tools/validate_shaders.py          # glslang でコンパイル + 静的チェック (既定値・world0)
 uv run tools/validate_shaders.py --full   # 設定やプロファイルを変えたとき
 uv run tools/gl_compile_check.py          # 実機のドライバで compile + link
-uv run tools/validate_shaders.py --env 1.7.6   # ローダーを 1 つだけ (latest / mid / 1.7.6。既定は 3 つとも)
-uv run tools/gl_compile_check.py --env 1.7.6   # 同じローダーの本文を実機のドライバで (既定は latest)
+uv run tools/validate_shaders.py --env 1.7.6   # ローダーを 1 つだけ (latest / 26.1 / mid / 1.7.6。既定は 4 つとも)
+uv run tools/gl_compile_check.py --env 1.7.6   # 同じローダーの本文を実機のドライバで (既定は latest = MC 26.3)
+uv run pytest -q tests                    # tools/ の単体テストとパックの不変条件 (GPU もゲームも要らない)
 uv run tools/gen_capabilities.py --check  # 能力と機能の生成物が最新か (validate_shaders.py も見る)
 uv run tools/check_slots.py --intervals --all  # colortex の論理名の区間の外の使用
 ```
@@ -35,6 +37,8 @@ glslang は `RAY_GLSLANG`、PATH、`tools/glslang/bin/glslang.exe` の順に探�
 - `/* RENDERTARGETS: 0,1,2 */` の `,` の後に空白を入れない (Iris が数として読めず失敗する)
 - `iris_`・`irisMain`・`moj_import` で始まる識別子は使わない (Iris の内部用で、読み込みが失敗する)
 - ローダーの版で分けるときは、`tools/capabilities.py` の表に能力 (`CAP_*`) と機能 (`FX_*`) を足して `uv run tools/gen_capabilities.py` で生成し、本体は `FX_*` だけを見る (`//@include "/lib/settings/capabilities.glsl"`)。`MC_VERSION` / `IRIS_VERSION` / `MAX_COLOR_BUFFERS` を生成物の外に書くと validate_shaders.py が落とす
+- Iris 1.11.4+26.2 以降は深度が逆 Z で、Iris が `depthtex0`〜`2` の読み出し・`gl_FragCoord.z`・`gl_FragDepth`・`gl_Position.z` を書き換えて順 Z に見せる。書き換えは名前で探すので、深度のサンプラーは組み込みのテクスチャ関数に直接渡すか、引数が `sampler2D` の関数に渡す。`at_midBlock` は 26.3 で正規化され 127 倍で戻るので、整数にする時は四捨五入する。`tools/iris_transforms.py` が検査する
+- MC 26.3 はエンチャントの光沢を本体の描画の中で足す。`FX_INLINE_GLINT` の中で `mc_hasGlint()` / `mc_sampleGlint()` を呼ぶ (Iris が差し込む関数で、古いローダーには無い)
 - 古い Iris (1.7) と Oculus でも読めるように書く。新しく使う colortex は 0〜15、`bufferObject` の添字は 8 まで、image の pixel type は Iris 1.7 の列挙にあるもの。validate_shaders.py がローダーごとに検査する (colortex16 以上は失敗)。時間で分け合う colortex は lib/buffers/slots.glsl の論理名と区間で使う
 - カスタム image (`image.*`) は Iris の上限 16 個をすべて使っている。足すときは既存のものを分け合うか、colortex か SSBO で代える
 - 設定で決まる分岐は `#if` / `const` で書き、uniform で分岐しない (実行しない側もリンクされ、レジスタも両側の多いほうになる)
