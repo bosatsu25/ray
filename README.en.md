@@ -95,7 +95,7 @@ If you use a clone of the repository, put the folder that directly contains `sha
 
 | Feature | Description |
 |---|---|
-| Light source shadows | Converts the world around the camera into voxels, picks the light sources that contribute most for each pixel, and casts rays toward them with DDA. Slabs block light in their actual shape (stairs are approximated as slabs), and light that passes through stained glass takes on its color |
+| Light source shadows | Converts the world around the camera into voxels, picks the light sources that contribute most for each pixel, and casts rays toward them with DDA. Slabs, stairs, doors and trapdoors, fences and walls, glass panes and iron bars, and snow layers block light in their actual shape (only inner-corner stairs are approximated by the straight stair shape), and light that passes through stained glass takes on its color |
 | Entity occlusion | Uses the triangles of player, mob, and block entity models as they are, so shadows follow the shape of the body. Transparent parts such as a skeleton's ribs let light through. Triangles beyond what fits, and everything on the "Low" setting, are approximated with 0.5-block voxels |
 | Handheld lights | Each hand is treated as an independent light source. Shadows on walls come from voxel rays, and shadows from the hands, weapons, and nearby mobs come from screen-space rays. "Handheld Light Shadow Darkness" changes how dark the shadows are |
 | Dropped items, projectiles, burning and glowing entities | Dropped torches, light arrows and fireballs, burning mobs, blazes, glow squid, and so on are registered as light sources and get shadows the same way as placed lights |
@@ -252,7 +252,7 @@ When the focal length is recomputed from each prescription, all of them match th
 
 At the top of the settings screen, you can choose from 9 quality presets. They are ordered from lightest to heaviest, and the default is "High". You can still change individual options after choosing a preset
 
-- High (Fastest) / High (Fast): The same techniques and look as High, with lower internal resolutions (light tracing and volumetric light, plus clouds in Fastest) and fewer samples (shadow blur, GI, light sources, reflections), made up for by temporal accumulation and denoising
+- High (Fastest) / High (Fast): The same techniques and look as High, with lower internal resolutions (light tracing, plus clouds in Fastest) and fewer samples (shadow blur, GI, light sources, reflections), made up for by temporal accumulation and denoising
 - Extreme (Lite): Keeps the Extreme techniques (voxel ray traced GI, voxel fill-in for reflections, and so on), with ranges and resolutions matched to Ultra
 - Extreme (Balanced): Keeps the Extreme ranges, with light tracing, GI, clouds, and volumetric light at half resolution
 - Cloud shape and shading are the same on every preset from Medium up. Only the amount of fine noise and the cost change
@@ -264,7 +264,7 @@ At the top of the settings screen, you can choose from 9 quality presets. They a
 | Light Source Shadows | OFF | ON | ON | ON | ON | ON | ON | ON | ON |
 | Traced Lights per Pixel | - | 2 | 2 | 4 | 4 | 8 | 8 | 16 | 16 |
 | Light trace resolution | - | 1/2 | 1/4 | 1/4 | 1/2 | Full | 1/2 | 1/2 | Full |
-| Entity / player occlusion | OFF / OFF | OFF / ON | ON / ON | ON / ON | ON / ON | ON / ON | ON / ON | ON / ON | ON / ON |
+| Entity / player occlusion | OFF / OFF | ON / ON | ON / ON | ON / ON | ON / ON | ON / ON | ON / ON | ON / ON | ON / ON |
 | Handheld light rays and contact shadows | OFF | ON | ON | ON | ON | ON | ON | ON | ON |
 | Entity lights (dropped items, etc.) | OFF | ON | ON | ON | ON | ON | ON | ON | ON |
 | Sun shadows (resolution / distance) | 1024 / 96 | 2048 / 128 | 4096 / 192 | 4096 / 192 | 4096 / 192 | 4096 / 256 | 4096 / 256 | 8192 / 512 | 8192 / 512 |
@@ -276,7 +276,7 @@ At the top of the settings screen, you can choose from 9 quality presets. They a
 | POM | OFF | OFF | OFF | OFF | OFF | ON | ON | ON | ON |
 | Atmosphere | Analytic approximation | Analytic approximation | LUT | LUT | LUT | LUT | LUT | LUT | LUT |
 | Volumetric clouds (resolution / steps) | None | 1/4 / Low | 1/4 / Medium | 1/2 / Medium | 1/2 / Medium | 1/2 / High | 1/2 / High | 1/2 / Ultra | Full / Ultra |
-| Volumetric light (resolution) | OFF | ON (1/4) | ON (1/4) | ON (1/4) | ON (1/2) | ON (colored, 1/2) | ON (colored, 1/2) | ON (colored, 1/2) | ON (colored, Full) |
+| Volumetric light (resolution) | OFF | ON (1/2) | ON (1/2) | ON (1/2) | ON (1/2) | ON (colored, 1/2) | ON (colored, 1/2) | ON (colored, 1/2) | ON (colored, Full) |
 | Depth of field (samples) | OFF | ON (30) | ON (30) | ON (30) | ON (30) | ON (50) | ON (50) | ON (75) | ON (75) |
 | Motion blur | OFF | OFF | ON | ON | ON | ON | ON | ON | ON |
 | Bloom / lens flare | OFF / ON | ON / ON | ON / ON | ON / ON | ON / ON | ON / ON | ON / ON | ON / ON | ON / ON |
@@ -303,7 +303,7 @@ The heavy lighting features can be toggled individually, separately from the pre
 |---|---|---|---|
 | Light Source Shadows | Light Source Shadows | Ray traced shadows for placed light sources. When OFF, lighting comes only from colored floodfill | Low |
 | Traced Lights per Pixel / Trace Resolution | Light Source Shadows | The number of light sources that cast shadows, and the trace resolution (1 / 1/2 / 1/4) | - |
-| Entity Occlusion | Light Source Shadows | Mobs and block entities block light | Low, Medium |
+| Entity Occlusion | Light Source Shadows | Mobs and block entities block light | Low |
 | Player Occlusion | Light Source Shadows | The player blocks light | Low |
 | Light Contact Shadows | Light Source Shadows | Fills in details too small for the voxels in screen space | Low, Medium |
 | Handheld Light Rays | Handheld Light | Voxel ray shadows for handheld lights | Low |
@@ -312,7 +312,7 @@ The heavy lighting features can be toggled individually, separately from the pre
 | Dropped Item Lights / Projectile Lights / Burning Entity Lights / Glowing Entity Lights | Entity Lights | A switch for each type | - |
 
 > [!TIP]
-> Light source shadows, GI and AO (when both are OFF), volumetric clouds, the atmosphere LUT, reflections, volumetric light, TAA, motion blur, depth of field, and bloom skip their entire passes when turned OFF (`program.*.enabled` in `shaders.properties`). If performance is too heavy, try turning these off first
+> Light source shadows, GI and AO (when both are OFF), volumetric clouds, the atmosphere LUT, reflections, volumetric light, screen-space light shafts, TAA, motion blur, depth of field, and bloom (when the HDR mode is also OFF) skip their entire passes when turned OFF (`program.*.enabled` in `shaders.properties`). If performance is too heavy, try turning these off first
 
 ## Development
 
@@ -325,6 +325,7 @@ The heavy lighting features can be toggled individually, separately from the pre
 | [`pyproject.toml`](pyproject.toml) | Definition of the Python environment for tools (uv) |
 | [`AGENTS.md`](AGENTS.md) (in Japanese) | Working notes for coding agents (layout, validation commands, conventions) |
 | [`tools/`](tools/) | Python scripts for texture generation, compile validation, and in-game debugging ([`tools/README.md`](tools/README.md) (in Japanese)) |
+| [`tests/`](tests/) | Unit tests for `tools/` and tests for the rules of the pack (stale generated files, per-loader branches, and so on) (pytest) |
 
 ### Linking with a Junction
 
@@ -341,13 +342,16 @@ With `cmd`, use `mklink /J "<instance>\shaderpacks\Ray" "<repository>"`. Junctio
 You can check for compile errors without launching the game. The Python environment for the scripts is managed with [uv](https://docs.astral.sh/uv/), so first run `uv sync` at the repository root. How to get glslang and the available options are described in [tools/README.md](tools/README.md) (in Japanese)
 
 ```powershell
-uv sync                                   # First time only. Installs Python 3.11, numpy, glfw, and PyOpenGL into .venv/
+uv sync                                   # First time only. Installs Python 3.11, numpy, glfw, PyOpenGL, Pillow, and pytest into .venv/
 uv run tools/validate_shaders.py          # Reproduces the Iris preprocessor and compiles with glslang (defaults, Overworld)
 uv run tools/validate_shaders.py --full   # Defaults in all 3 dimensions, all profiles in the Overworld
 uv run tools/gl_compile_check.py          # compile + link with your local GPU driver
-uv run tools/validate_shaders.py --env 1.7.6   # One loader only (latest / mid / 1.7.6). Without it, all 3 are validated
-uv run tools/gl_compile_check.py --env 1.7.6   # compile + link the source for older Iris and Oculus (default: latest)
+uv run tools/validate_shaders.py --env 1.7.6   # One loader only (latest / 26.1 / mid / 1.7.6). Without it, all 4 are validated
+uv run tools/gl_compile_check.py --env 1.7.6   # compile + link the source for older Iris and Oculus (default: latest = Minecraft 26.3)
+uv run pytest -q tests                    # Unit tests for tools/ and tests for the rules of the pack (no GPU or game needed)
 ```
+
+On every pull request, GitHub Actions runs the tests, `validate_shaders.py`, and compile + link on Mesa's software renderer (llvmpipe). How to run the same compile + link on Linux without a GPU is in [tools/README.md](tools/README.md#mesa-で-compile--link-する-linux) (in Japanese)
 
 ### Automated Debug Loop with AI Agents
 
@@ -375,6 +379,7 @@ The game-side setup (installing Minescript, keeping `ray_agent.py` running, and 
 
 > [!WARNING]
 > - Do not write non-ASCII characters in `*.properties`. Iris reads these files as ISO-8859-1, so Japanese text, even in a comment, causes the whole file to be ignored (`validate_shaders.py` checks for this)
+> - From Minecraft 26.2 the depth buffer is reverse-Z, and Iris finds reads of `depthtex0` to `depthtex2` by name and rewrites them. Pass a depth sampler directly to a built-in texture function, or to a function whose parameter is a `sampler2D` (`validate_shaders.py` checks for this)
 > - NVIDIA drivers allow at most 8 image uniforms per stage. The declarations in `lib/buffers/images.glsl` are opt-in, so in programs that write to images, `#define` only the `IMG_*` you use before declaring `common.glsl`
 
 ## Pipeline
@@ -401,7 +406,7 @@ flowchart TD
     subgraph composite["composite"]
         direction TB
         refl["Reflections and translucent compositing"]
-        fog["Volumetric light / fog"]
+        fog["Volumetric light / screen-space light shafts / fog"]
         post["TAA / motion blur / DoF / bloom / auto exposure"]
         refl --> fog --> post
     end
@@ -443,7 +448,7 @@ Handheld lights are not added to the floodfill, so that they are not counted twi
   - [ ] Add light source shadows to translucent surfaces (they are currently lit only by floodfill, so they are dark)
   - [ ] Register light from block entities such as ender chests as voxel light sources
   - [ ] Read the light level of light blocks (`minecraft:light`) correctly
-  - [ ] Make stairs block light in their oriented shape (currently approximated as slabs)
+  - [x] Make stairs block light in their oriented shape (only inner corners are approximated by the straight stair shape)
   - [ ] Support glowing blocks from mods
 - [ ] Optimization
   - [ ] Make light tracing lighter in scenes with many light sources
