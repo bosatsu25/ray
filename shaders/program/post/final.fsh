@@ -247,7 +247,7 @@ void main() {
      * 直線写像で歪曲の無いプリセットでは定数畳み込みで丸ごと消える
      */
 #ifdef LENS_DISTORTION
-    const bool distort = LP_K1 != 0.0 || LP_K2 != 0.0 || LP_K3 != 0.0 || LENS_PROJECTION == 1;
+    const bool distort = LP_K1 != 0.0 || LP_K2 != 0.0 || LP_K3 != 0.0 || LENS_PROJECTION != 0;
 #else
     const bool distort = false;
 #endif
@@ -256,8 +256,8 @@ void main() {
     vec2 uvL = distort ? lensProjectUv(uv, rhoLens) : uv;
     // 描画の範囲の外 (魚眼の「横幅に合わせる」の隅) は黒。縁は出力の 1 画素ぶんで滑らかに落とす
     float inside = 1.0;
-#if defined LENS_DISTORTION && LENS_PROJECTION == 1
-    #if LENS_FISHEYE_FIT == 1
+#if defined LENS_DISTORTION && LENS_PROJECTION != 0
+    #if LENS_FISHEYE_FIT == 1 && LENS_PROJECTION == 1
         vec2 edgePx = min(uvL, 1.0 - uvL) * viewSize();
         vec2 footprint = fwidth(uvL * viewSize());
         inside = saturate(min(edgePx.x, edgePx.y) / max(max(footprint.x, footprint.y), 1e-3) + 0.5);
@@ -288,7 +288,7 @@ void main() {
 
     // レンズ: 倍率色収差 (波長ごとに倍率が違い、画面の隅ほど縁が虹色にずれる)
 #ifdef LENS_CHROMATIC
-    #if defined LENS_DISTORTION && LENS_PROJECTION == 1
+    #if defined LENS_DISTORTION && LENS_PROJECTION != 0
     if (LP_CA != 0.0) hdr = LENS_WARP_TAA ? lensChromaticSample(colortex0, uv, LP_CA) : lensChromaticProjected(colortex0, uv, LP_CA);
     #else
     if (LP_CA != 0.0) hdr = lensChromaticSample(colortex0, uvL, LP_CA);

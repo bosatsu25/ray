@@ -784,7 +784,7 @@ value.LENS_POINT_SPREAD_SIZE.1=中
 value.LENS_POINT_SPREAD_SIZE.2=大
 value.LENS_POINT_SPREAD_SIZE.3=特大
 option.LENS_PRESET=レンズ
-option.LENS_PRESET.comment=レンズの個性 (フレアの色と形・光条の本数・収差) をまとめて選ぶ。個別の強さは「カスタム」の時だけ下の「カスタムレンズ」で変えられる。ON/OFF はどのレンズでも効く。Sonnar 以降は実在のレンズの特許の処方から計算した値を使う。Sonnar: 高コントラストでゴーストが少なく、わずかに糸巻き型。Summilux 35: 開放で光がにじみ、周辺の玉ボケは猫目、四隅が暗い。Canon 50/1.2: 開放は柔らかく低コントラスト、周辺で背景が流れ、四隅が大きく落ちる。Hologon: 110 度でも直線がまっすぐ、四隅が大きく暗い、F8 固定 (FOV 68)。Flektogon: 中ほどで樽型・隅で糸巻き型の陣笠歪曲 (FOV 54)。魚眼: 魚眼の写り方で直線が曲がる (FOV 110。魚眼の合わせ方を「横幅を合わせる」にすると実物の画角)。ぎょぎょっと: 正射影寄りの魚眼で周辺が Rokkor より強く縮む、F8 固定。Ultra Wide-Heliar 12: 121 度、単純な樽型、絞っても四隅がとても暗い。New FD 14: 114 度、四隅で弱まる樽型、開放の四隅が暗く絞ると戻る。STF 135: アポダイゼーションフィルターでボケの縁が溶けて輪郭が出ない。FA 28 Soft: 開放でピントの合った所にもハローが付き、F5.6 までに消える (絞りは被写界深度の設定で)。Canon 50/0.95: 四隅が最も暗く、開放だけ光がにじむ。名前の FOV は、35mm 判の横幅 36mm を画面の横幅に合わせた時の実物の画角: 縦の FOV = 2 atan(18 / f x 9 / 16) (35mm = 32、20mm = 54、15mm = 68)。50mm 以上はゲームの下限より狭くなるので 30 (実物より少し広い)
+option.LENS_PRESET.comment=レンズの個性 (フレアの色と形・光条の本数・収差) をまとめて選ぶ。個別の強さは「カスタム」の時だけ下の「カスタムレンズ」で変えられる。ON/OFF はどのレンズでも効く。Sonnar 以降は実在のレンズの特許の処方から計算した値を使う。Sonnar: 高コントラストでゴーストが少なく、わずかに糸巻き型。Summilux 35: 開放で光がにじみ、周辺の玉ボケは猫目、四隅が暗い。Canon 50/1.2: 開放は柔らかく低コントラスト、周辺で背景が流れ、四隅が大きく落ちる。Hologon: 110 度でも直線がまっすぐ、四隅が大きく暗い、F8 固定 (FOV 68)。Flektogon: 中ほどで樽型・隅で糸巻き型の陣笠歪曲 (FOV 54)。魚眼: 魚眼の写り方で直線が曲がる (FOV 110。魚眼の合わせ方を「横幅を合わせる」にすると実物の画角)。ぎょぎょっと: 正射影寄りの魚眼で周辺が Rokkor より強く縮む、F8 固定。Ultra Wide-Heliar 12: 121 度、単純な樽型、絞っても四隅がとても暗い。New FD 14: 114 度、四隅で弱まる樽型、開放の四隅が暗く絞ると戻る。STF 135: アポダイゼーションフィルターでボケの縁が溶けて輪郭が出ない。FA 28 Soft: 開放でピントの合った所にもハローが付き、F5.6 までに消える (絞りは被写界深度の設定で)。Canon 50/0.95: 四隅が最も暗く、開放だけ光がにじむ。名前の FOV は、35mm 判の横幅 36mm を画面の横幅に合わせた時の実物の画角: 縦の FOV = 2 atan(18 / f x 9 / 16) (35mm = 32、20mm = 54、15mm = 68)。50mm 以上はゲームの下限より狭くなるので 30 (実物より少し広い)。広角 (パニーニ): 実在のレンズではなく、FOV 90〜110 で左右の端が横に引き伸ばされるのを抑える写し方 (縦の線はまっすぐのまま)。Trioplan 100: 後ボケの縁が明るい輪になるシャボン玉ボケ。Helios 40-2: 44-2 より強いぐるぐるボケと猫目 (この 2 本は処方からの計算ではなく推定値)
 value.LENS_PRESET.0=カスタム
 value.LENS_PRESET.1=現代の単焦点 (控えめ)
 value.LENS_PRESET.2=Helios 44-2
@@ -804,6 +804,9 @@ value.LENS_PRESET.15=Canon New FD 14/2.8L (FOV 72)
 value.LENS_PRESET.16=Minolta STF 135/2.8 [T4.5]
 value.LENS_PRESET.17=Pentax FA 28/2.8 Soft (FOV 40)
 value.LENS_PRESET.18=Canon 50/0.95 (1961)
+value.LENS_PRESET.19=広角 (パニーニ, FOV 90-110)
+value.LENS_PRESET.20=Meyer Trioplan 100/2.8
+value.LENS_PRESET.21=Helios 40-2 85/1.5
 option.LENS_QUALITY=レンズ効果の品質
 option.LENS_QUALITY.comment=ゴーストの数 (8 / 12 / 16 / 24) と色収差・ゴーストの波長サンプル数 (3 / 4 / 5 / 7)
 value.LENS_QUALITY.0=低
@@ -891,9 +894,12 @@ option.LENS_C_DISTORTION.comment=正 = 樽型、負 = 糸巻き型
 option.LENS_C_DISTORTION2=歪曲 (4 次)
 option.LENS_C_DISTORTION2.comment=画面の端ほど効く。「歪曲」と逆の符号にすると、中ほどと端で曲がり方が逆の陣笠型になる
 option.LENS_C_PROJECTION=写像
-option.LENS_C_PROJECTION.comment=魚眼は画面を魚眼の写り方に再投影し、直線が曲がる。FOV 90〜110 で使う
+option.LENS_C_PROJECTION.comment=魚眼は画面を魚眼の写り方に再投影し、直線が曲がる。パニーニは高い FOV で左右の端が横に引き伸ばされるのを抑える (縦の線はまっすぐのまま、中心を通らない横の線が少し曲がる)。どちらも FOV 90〜110 で使う
 value.LENS_C_PROJECTION.0=直線写像
 value.LENS_C_PROJECTION.1=魚眼
+value.LENS_C_PROJECTION.2=パニーニ
+option.LENS_C_PANINI=パニーニの強さ
+option.LENS_C_PANINI.comment=写像がパニーニの時の強さ。小さいほど直線写像に近く、1 で端の引き伸ばしが最も減る (横の線の曲がりも最も大きい)
 option.LENS_C_FISHEYE_K=魚眼の写像
 option.LENS_C_FISHEYE_K.comment=r = f sin(kθ) / k。-0.5 = 立体射影、0 = 等距離、0.5 = 等立体角、1 = 正射影。0.564 は Minolta Rokkor 16mm
 option.LENS_C_CA=倍率色収差の強さ
