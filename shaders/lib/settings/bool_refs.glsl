@@ -28,6 +28,8 @@
 #endif
 #ifdef GLOW_LICHEN_LIGHT
 #endif
+#ifdef MOD_BLOCK_LIGHTS
+#endif
 #ifdef LIGHT_SHADOWS
 #endif
 #ifdef LIGHT_SHAPE_TRACE
@@ -35,6 +37,10 @@
 #ifdef LIGHT_TRANSLUCENT_TINT
 #endif
 #ifdef LIGHT_SPECULAR
+#endif
+#ifdef LIGHT_PICK_STRATIFIED
+#endif
+#ifdef LIGHT_TRANSLUCENT_SHADOWS
 #endif
 #ifdef LIGHT_ENTITY_OCCLUSION
 #endif

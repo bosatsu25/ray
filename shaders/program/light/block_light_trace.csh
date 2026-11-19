@@ -93,6 +93,11 @@ layout(local_size_x = 8, local_size_y = 8) in;
 #else
     const int DET_COUNT = 1;
 #endif
+// くじの層の数の上限。多いほど残りの光源を 1 つずつ確実に回れるが、1 周に掛かるフレームが延びてデノイズの履歴 (十数フレーム) に収まらなくなる
+const int LIGHT_PICK_STRATA = 8;
+const float R1_STEP = 0.618033988749895;
+// 写し直した乱数を 1 未満に保つ (float で 1.0 より小さい最大の値)
+const float PICK_U_MAX = 0.99999994;
 // 接触影を付ける光源数 (寄与の大きい順)。全光源に付けると EXTREME で重くなり過ぎる
 const int CONTACT_SHADOW_LIGHTS = LIGHT_CONTACT_SHADOW_COUNT;
 const float LIGHT_CONTACT_LENGTH = 1.25;
@@ -167,7 +172,22 @@ void main() {
         float nextW = 0.0;
         vec3 nextE = vec3(0.0);
     #endif
+    #ifdef LIGHT_PICK_STRATIFIED
+        /*
+         * くじの時間方向の層別化。毎フレーム独立に選ぶと、同じ光源が続けて当たる・外れる偏りがデノイズの履歴に残ってちらつく
+         * - 残りの候補をビンの枠の番号で strata 個の層に分け、フレームごとに 1 つの層だけからくじを引く (strata フレームで全部の層を 1 回ずつ見る)
+         *   残りが strata 個以下なら、どの光源も strata フレームに 1 回必ずトレースされる
+         * - 層の中は 1 個の一様乱数で引き、その乱数は同じ層が回ってくるたびに黄金比で進める (独立な乱数より重みどおりの回数に早く近づく)
+         * どちらも期待値は変えない (層は strata 倍、くじは 重みの和 / 選んだ重み 倍して戻す)。数値の確認は tests/test_light_pick.py
+         * 画素ごとの位相と乱数の初期値は、時間で動かさないブルーノイズから取る
+         */
+        vec4 pickNoise = blueNoise(low, 0);
+        int strata = clamp(int(n) - DET_COUNT, 1, LIGHT_PICK_STRATA);
+        int stratum = (frameCounter + int(pickNoise.b * 255.0)) % strata;
+        float pickU = fract(pickNoise.a + R1_STEP * float((frameCounter / strata) & 4095));
+    #else
         uint seed = pcgHash(uint(low.x) | (uint(low.y) << 16u)) ^ pcgHash(uint(frameCounter));
+    #endif
 
         for (uint k = 0u; k < n; k++) {
             int li = lightBinEntry(bin, k);
@@ -190,13 +210,30 @@ void main() {
                 }
             }
             if (ci < 0 || cw <= 0.0) continue;
-            restSum += cw;
             restTotal += ce;
+    #ifdef LIGHT_PICK_STRATIFIED
+            if (int(k) % strata == stratum) {
+                // 1 個の乱数で引く重み付きリザーバ。当たり・外れのどちらでも、使った区間の中の位置へ写し直すので乱数は一様のまま次の候補に使える
+                restSum += cw;
+                float p = cw / restSum;
+                if (pickU < p) {
+                    restIdx = ci;
+                    restW = cw;
+                    restE = ce;
+                    pickU /= p;
+                } else {
+                    pickU = (pickU - p) / (1.0 - p);
+                }
+                pickU = min(pickU, PICK_U_MAX);
+            }
+    #else
+            restSum += cw;
             if (hash1(seed + k * 0x9E3779B9u) * restSum < cw) {
                 restIdx = ci;
                 restW = cw;
                 restE = ce;
             }
+    #endif
     #ifdef STOCHASTIC_SLOT
             if (cw > nextW) {
                 nextIdx = ci;
@@ -233,6 +270,9 @@ void main() {
     #ifdef STOCHASTIC_SLOT
         int pickIdx = restIdx;
         vec3 pickE = restIdx >= 0 ? restE * (restSum / restW) : vec3(0.0);
+    #ifdef LIGHT_PICK_STRATIFIED
+        pickE *= float(strata);
+    #endif
         // 動くエンティティは自分の速度を持たず、デノイズの履歴が体の別の場所の値になる。くじの光源が
         // フレームごとに変わると色の比が振れたまま混ざって斑点になるので、くじの代わりに残りで一番明るい
         // 光源を決まった 1 本としてトレースする。それ以外は、トレースした光源の可視率 (照度の輝度で重み付け)

@@ -49,6 +49,12 @@
 
 in vec2 mc_Entity;
 in vec4 at_midBlock;
+#ifdef MOD_BLOCK_LIGHTS
+in vec2 mc_midTexCoord;
+// スプライト 1 枚 (16 ピクセル) が 1 テクセルになる mip。ミップマップの設定がこれより浅いと、ある中で一番粗い段が使われる
+const float MOD_LIGHT_TEXTURE_LOD = 4.0;
+const float MID_UV_FIXED_SCALE = 32768.0;
+#endif
 
 #ifdef PROGRAM_SHADOW_FALLBACK
 // shadow はジオメトリシェーダー (shadow.gsh) を通る。GS の出力と同じ名前は使えないので、入力側の名前に替える
@@ -80,6 +86,19 @@ void main() {
     normalPlayer = mat3(shadowModelViewInverse) * normalize(gl_NormalMatrix * gl_Normal);
     int rawBlockId = int(round(mc_Entity.x));
     blockId = terrainBlockId(stripMetalGate(rawBlockId));
+#ifdef MOD_BLOCK_LIGHTS
+    // 未登録の光るブロック (MOD) を汎用の光源としてボクセルに書く。色はテクスチャの平均の色から選ぶ
+    // renderStage は下の isTerrain と同じ条件 (地形以外の mc_Entity はブロック ID ではない)。頂点でのテクスチャ読みは光るブロックの頂点だけ
+    bool modLight = isUnregisteredBlock(rawBlockId) && at_midBlock.w > 0.5
+        && (renderStage == MC_RENDER_STAGE_TERRAIN_SOLID || renderStage == MC_RENDER_STAGE_TERRAIN_CUTOUT
+            || renderStage == MC_RENDER_STAGE_TERRAIN_CUTOUT_MIPPED || renderStage == MC_RENDER_STAGE_TERRAIN_TRANSLUCENT);
+    if (modLight) {
+        // Iris 1.11 + Sodium 0.9 は mid UV を別の型で読み直した巨大な値で渡すことがある (gbuffers_solid.vsh と同じ直し方)
+        vec2 midUv = mc_midTexCoord;
+        if (any(greaterThan(midUv, vec2(2.0)))) midUv = uintBitsToFloat(uvec2(midUv * MID_UV_FIXED_SCALE)) / MID_UV_FIXED_SCALE;
+        blockId = modLightBlockId(textureLod(gtexture, midUv, MOD_LIGHT_TEXTURE_LOD).rgb * gl_Color.rgb);
+    }
+#endif
     // 色付き影はブロックライト (floodfill / 光源シャドウ) と同じ透過色の表を使う
     tintTransmittance = isTintBlock(blockId) ? floodCellTransmittance(blockId) : vec3(1.0);
 

@@ -129,6 +129,10 @@ in float glowGain;
 #if defined GBUF_ENTITIES_TRANSLUCENT || defined GBUF_BLOCK_TRANSLUCENT
     #define GBUF_FORWARD_OPAQUE
 #endif
+// 水・ガラスの面にも設置光源の直接光と影を付ける (LIGHT_TRANSLUCENT_SHADOWS)。無い時は floodfill だけで照らすので、光源のそばのガラスが暗い
+#if defined GBUF_WATER && defined LIGHT_TRANSLUCENT_SHADOWS && defined LIGHT_SHADOWS
+    #define GBUF_FORWARD_TRACED
+#endif
 // 半透明のエンティティ・ブロックエンティティにも不透明の経路 (gbuffers_solid.fsh) と同じ条件で自動法線を付ける
 // 金属の防具は模様の凹凸が映り込みと照り返しに、非金属 (スキンの半透明部分・旗の模様など) は拡散の陰影に出る
 #if defined GENERATED_NORMALS && PBR_FORMAT == 0 && (defined GBUF_BLOCK_TRANSLUCENT || (defined GBUF_ENTITIES_TRANSLUCENT && defined GENERATED_NORMAL_ENTITIES))
@@ -188,6 +192,11 @@ vec3 forwardDiffuse(Material m, vec3 playerPos, vec3 normal, vec3 geoNormal, vec
     // ビンの光源 (SL_BLOCK_FORWARD_ENTITY) と装備の光源ごとの鏡面は、トレースを 1 か所にするため手持ち光源と同じ呼び出しで集める
     const int tracedBlockMode = SL_BLOCK_FORWARD_ENTITY;
     const uint tracedTerms = SL_HAND | SL_BLOCK_SPECULAR_TRACED;
+    const int ambientBlockMode = SL_BLOCK_NONE;
+#elif defined GBUF_FORWARD_TRACED
+    // 半透明の面は透けた奥が見えるので、GI の代わりの照り返しは足さない (SL_BLOCK_FORWARD_TRACED)
+    const int tracedBlockMode = SL_BLOCK_FORWARD_TRACED;
+    const uint tracedTerms = SL_HAND;
     const int ambientBlockMode = SL_BLOCK_NONE;
 #else
     const int tracedBlockMode = SL_BLOCK_NONE;
