@@ -190,6 +190,24 @@ float fisheyeFocal() {
 #endif
     return r / fisheyeHeight(atan(r * lensTanHalf().y));
 }
+#elif LENS_PROJECTION == 2
+/*
+ * パニーニ投影 (円筒への立体射影)。高い FOV の直線写像は左右の端ほど横に引き伸ばされるので、横方向だけ円筒に巻いて詰める
+ * 方位 φ (縦の軸まわりの角) と仰角の tan t について、像の位置は x = S sin φ, y = S t, S = (d + 1) / (d + cos φ)
+ * d = LP_PANINI_D。0 で直線写像のまま、1 で円筒の立体射影。縦の線はまっすぐのまま、中心を通らない横の線が弓なりに曲がる
+ * 元画像 (直線写像) の位置は X = tan φ, Y = t / cos φ
+ */
+float paniniScale(float cosPhi) { return (LP_PANINI_D + 1.0) / (LP_PANINI_D + cosPhi); }
+
+/*
+ * 出力の焦点距離 (画面の縦の半分 = 1)。出力の左右端が元画像の左右端に当たるように決める
+ * この時、出力の四隅は元画像の四隅にちょうど当たり、上下の端は中央ほど元画像の内側を読む (枠の外は読まない)
+ */
+float paniniFocal() {
+    float tanEdge = lensTanHalf().x;
+    float cosEdge = inversesqrt(1.0 + tanEdge * tanEdge);
+    return aspectRatio / (paniniScale(cosEdge) * tanEdge * cosEdge);
+}
 #endif
 
 /*
@@ -208,6 +226,17 @@ vec2 lensProjectUv(vec2 uv, out float rhoLens) {
     // 中心付近では tan(θ) / r -> 1 / F
     float scale = r > 1e-5 ? tan(theta) / r : 1.0 / focal;
     return lensScreenUv(p * (scale / lensTanHalf().y));
+#elif LENS_PROJECTION == 2
+    vec2 p = lensScreenPos(uv) / paniniFocal();
+    float d = LP_PANINI_D;
+    // x = (d + 1) sin φ / (d + cos φ) を cos φ について解く。k = x^2 / (d + 1)^2 として cos φ = (sqrt(1 + k (1 - d^2)) - k d) / (k + 1)
+    float k = p.x * p.x / ((d + 1.0) * (d + 1.0));
+    float cosPhi = (sqrt(max(1.0 + k * (1.0 - d * d), 0.0)) - k * d) / (k + 1.0);
+    // tan φ = (x / S) / cos φ、元画像の縦は (y / S) / cos φ
+    vec2 uvSrc = lensScreenUv(p / (paniniScale(cosPhi) * cosPhi * lensTanHalf().y));
+    // 周辺光量などの表は直線写像の時と同じく、元画像の半径で引く (lensFieldRho と同じ尺度)
+    rhoLens = sqrt(lensRadius2(uvSrc));
+    return uvSrc;
 #else
     rhoLens = sqrt(lensRadius2(uv));
     return lensDistortUv(uv);
@@ -222,6 +251,11 @@ vec2 lensForwardUv(vec2 uvSrc) {
     if (tl < 1e-6) return uvSrc;
     float r = fisheyeFocal() * fisheyeHeight(atan(tl));
     return lensScreenUv(t * (r / tl));
+#elif LENS_PROJECTION == 2
+    // x = S sin φ = S X cos φ、y = S t = S Y cos φ (X, Y は元画像の tan の座標)
+    vec2 t = lensScreenPos(uvSrc) * lensTanHalf().y;
+    float cosPhi = inversesqrt(1.0 + t.x * t.x);
+    return lensScreenUv(t * (paniniScale(cosPhi) * cosPhi * paniniFocal()));
 #else
     // 放射方向の 1 変数の方程式 u f(u^2) / norm = s を Newton 法で解く (u, s は画面の隅で 1 の半径)
     vec2 p = lensScreenPos(uvSrc);
@@ -253,15 +287,15 @@ float lensFieldRho(vec2 uvSrc) {
  * 歪曲・魚眼を TAA の中で組み立てるか (LENS_WARP_IN_TAA)
  * true なら composite20 (TAA) が出力 (再投影後) の画面を作り、以降の colortex0 は出力の座標になる
  * (final での再投影はしない)。深度・G バッファ・速度は元画像のままなので、後段は postSourceUv で読む位置を写す
- * 自動: 魚眼か、歪曲で画面の倍率が LENS_WARP_AUTO_AMOUNT より大きく変わる時
+ * 自動: 魚眼・パニーニか、歪曲で画面の倍率が LENS_WARP_AUTO_AMOUNT より大きく変わる時
  */
 #define LENS_FACTOR_AT(r2) (1.0 + LENS_K1 * (r2) + LENS_K2 * (r2) * (r2) + LENS_K3 * (r2) * (r2) * (r2))
 const float LENS_DISTORTION_AMOUNT = max(max(abs(LENS_FACTOR_AT(0.25) - 1.0), abs(LENS_FACTOR_AT(0.5) - 1.0)),
                                          max(abs(LENS_FACTOR_AT(0.75) - 1.0), abs(LENS_FACTOR_AT(1.0) - 1.0)));
 #if defined TAA && defined LENS_DISTORTION && LENS_WARP_IN_TAA == 2
-const bool LENS_WARP_TAA = LENS_PROJECTION == 1 || LENS_DISTORTION_AMOUNT > 0.0;
+const bool LENS_WARP_TAA = LENS_PROJECTION != 0 || LENS_DISTORTION_AMOUNT > 0.0;
 #elif defined TAA && defined LENS_DISTORTION && LENS_WARP_IN_TAA == 0
-const bool LENS_WARP_TAA = LENS_PROJECTION == 1 || LENS_DISTORTION_AMOUNT > LENS_WARP_AUTO_AMOUNT;
+const bool LENS_WARP_TAA = LENS_PROJECTION != 0 || LENS_DISTORTION_AMOUNT > LENS_WARP_AUTO_AMOUNT;
 #else
 const bool LENS_WARP_TAA = false;
 #endif
@@ -393,9 +427,9 @@ vec3 lensChromaticSample(sampler2D tex, vec2 uv, float amount) {
     return result;
 }
 
-#if LENS_PROJECTION == 1
+#if LENS_PROJECTION != 0
 /*
- * 魚眼の倍率色収差: 波長ごとの倍率は出力 (像面) の上で掛け、それぞれを元画像へ写して読む
+ * 魚眼・パニーニの倍率色収差: 波長ごとの倍率は出力 (像面) の上で掛け、それぞれを元画像へ写して読む
  * 中心は 2 倍以上に引き伸ばすので、双線形ではなく Catmull-Rom で読む
  */
 vec3 lensChromaticProjected(sampler2D tex, vec2 uv, float amount) {

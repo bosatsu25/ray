@@ -4,7 +4,7 @@
  * 強さ 1 の目安: ゴーストは物理量 (反射率から計算) そのもの、他は「はっきり分かるが破綻しない」程度
  * LENS_GHOST_TABLE はゴースト表 (lens_ghosts.glsl) の番号 = 設計 x 3 + コーティング
  * 番号: 0 = カスタム (最後の #else)、1 = 現代の単焦点 (既定)、2-6 = 推定値のオールドレンズとアナモルフィック、
- * 7-12 = 特許の処方から計算したレンズ。新しいレンズは後ろに足し、既存の番号は変えない (ユーザーの保存値を保つ)
+ * 7-18 = 特許の処方から計算したレンズ、19 = パニーニ投影の広角、20-21 = 推定値のオールドレンズ。新しいレンズは後ろに足し、既存の番号は変えない (ユーザーの保存値を保つ)
  */
 #ifndef POST_LENS_PRESETS_GLSL
 #define POST_LENS_PRESETS_GLSL
@@ -768,6 +768,120 @@ const float LP_RI_STOP[9] = float[9](1.000, 0.996, 0.978, 0.951, 0.923, 0.890, 0
 const float LP_FIELD_ZT[9] = float[9](0.000, -0.027, -0.100, -0.193, -0.265, -0.249, -0.037, 0.552, 1.438);
 const float LP_FIELD_ZS[9] = float[9](0.000, -0.023, -0.087, -0.172, -0.247, -0.259, -0.123, 0.330, 1.186);
 
+#elif LENS_PRESET == 19
+/*
+ * 広角 (パニーニ投影)。実在のレンズではなく、高い FOV (90-110) の直線写像で左右の端が横に引き伸ばされるのを抑える写し方
+ * フレアと収差は現代の単焦点 (1) と同じ控えめな値で、広角らしく倍率色収差と口径食を少しだけ強める
+ * 強さ 0.7: FOV 110 で左右の端の横への伸びが直線写像の半分ほどになり、横の線の曲がりはまだ目立たない (式からの見積もりで、実機では見ていない)
+ */
+#define LENS_GHOST_TABLE 3
+#define LENS_BLADES 9
+#define LENS_PROJECTION 2
+#define LENS_PANINI_D 0.7
+#define LENS_GHOST_TUNED
+const int LP_GHOST_MASK = 0x92C;
+const float LP_GHOST_SATURATION = 0.06;
+const float LP_GHOST_FRONT_SCALE = 2.2;
+const float LP_F_OPEN = 2.8;
+const float LP_BLADE_ROUNDNESS = 0.6;
+const float LP_GHOSTS = 1.8;
+const float LP_SCREEN_GHOSTS = 1.0;
+const float LP_STARBURST = 0.75;
+const float LP_STAR_SIZE = 1.0;
+const float LP_HALO = 0.08;
+const float LP_DIRT = 0.05;
+const float LP_DIRT_CONTRAST = 0.5;
+const float LP_VEILING_GLARE = 0.3;
+const float LP_STREAK = 0.0;
+const vec3 LP_STREAK_TINT = vec3(0.4, 0.65, 1.0);
+const float LP_SQUEEZE = 1.0;
+const float LP_K1 = 0.0;
+const float LP_K2 = 0.0;
+const float LP_K3 = 0.0;
+const float LP_CA = 0.25;
+const float LP_AXIAL_CA = 0.0;
+const float LP_SOFT_FOCUS = 0.0;
+const float LP_SWIRL = 0.0;
+const float LP_FIELD_CURVATURE = 0.0;
+const float LP_CATS_EYE = 0.25;
+const float LP_HALATION = 0.0;
+const float LP_BOKEH_RIM = 0.0;
+const float LP_SA_RIM = 0.0;
+const float LP_YELLOWING = 0.0;
+const float LP_RINGING = 0.0;
+
+#elif LENS_PRESET == 20
+/*
+ * Meyer-Optik Trioplan 100mm F2.8 (トリプレット 3 群 3 枚, 15 枚羽根)
+ * 補正し過ぎの球面収差で、後ボケの縁が明るい輪になる「シャボン玉ボケ」。開放は柔らかくコントラストが低い
+ * 数値は推定 (処方から計算していない)。ゴーストの表はトリプレットを持っていないので、枚数の近い Petzval (単層コート) で代える
+ */
+#define LENS_GHOST_TABLE 7
+#define LENS_BLADES 15
+const float LP_F_OPEN = 2.8;
+const float LP_BLADE_ROUNDNESS = 0.8;
+const float LP_GHOSTS = 1.0;
+const float LP_SCREEN_GHOSTS = 1.0;
+const float LP_STARBURST = 0.3;
+const float LP_STAR_SIZE = 1.0;
+const float LP_HALO = 0.35;
+const float LP_DIRT = 0.3;
+const float LP_DIRT_CONTRAST = 0.5;
+const float LP_VEILING_GLARE = 1.1;
+const float LP_STREAK = 0.0;
+const vec3 LP_STREAK_TINT = vec3(0.4, 0.65, 1.0);
+const float LP_SQUEEZE = 1.0;
+const float LP_K1 = -0.01;
+const float LP_K2 = 0.0;
+const float LP_K3 = 0.0;
+const float LP_CA = 0.3;
+const float LP_AXIAL_CA = 0.5;
+const float LP_SOFT_FOCUS = 0.35;
+const float LP_SWIRL = 0.3;
+const float LP_FIELD_CURVATURE = 0.4;
+const float LP_CATS_EYE = 0.5;
+const float LP_HALATION = 0.0;
+const float LP_BOKEH_RIM = 0.35;
+const float LP_SA_RIM = 0.6;
+const float LP_YELLOWING = 0.0;
+const float LP_RINGING = 0.2;
+
+#elif LENS_PRESET == 21
+/*
+ * Helios 40-2 85mm F1.5 (Biotar 型 6 枚 4 群, 単層コート, 10 枚羽根)
+ * Helios 44-2 (2) と同じ型の大口径の中望遠。ぐるぐるボケと猫目がさらに強く、開放は柔らかい
+ * 数値は推定 (処方から計算していない)。44-2 の値を口径の分だけ強めた
+ */
+#define LENS_GHOST_TABLE 1
+#define LENS_BLADES 10
+const float LP_F_OPEN = 1.5;
+const float LP_BLADE_ROUNDNESS = 0.2;
+const float LP_GHOSTS = 1.0;
+const float LP_SCREEN_GHOSTS = 1.0;
+const float LP_STARBURST = 0.6;
+const float LP_STAR_SIZE = 1.0;
+const float LP_HALO = 0.45;
+const float LP_DIRT = 0.3;
+const float LP_DIRT_CONTRAST = 0.5;
+const float LP_VEILING_GLARE = 1.0;
+const float LP_STREAK = 0.0;
+const vec3 LP_STREAK_TINT = vec3(0.4, 0.65, 1.0);
+const float LP_SQUEEZE = 1.0;
+const float LP_K1 = -0.01;
+const float LP_K2 = 0.0;
+const float LP_K3 = 0.0;
+const float LP_CA = 0.5;
+const float LP_AXIAL_CA = 0.8;
+const float LP_SOFT_FOCUS = 0.4;
+const float LP_SWIRL = 1.6;
+const float LP_FIELD_CURVATURE = 1.0;
+const float LP_CATS_EYE = 0.8;
+const float LP_HALATION = 0.0;
+const float LP_BOKEH_RIM = 0.3;
+const float LP_SA_RIM = 0.0;
+const float LP_YELLOWING = 0.0;
+const float LP_RINGING = 0.25;
+
 #else
 // カスタム (LENS_PRESET 0): 個別スライダー (LENS_C_*) をそのまま使う
 #define LENS_GHOST_TABLE (LENS_C_DESIGN * 3 + LENS_C_COATING)
@@ -786,6 +900,7 @@ const float LP_STREAK = LENS_C_STREAK;
 const vec3 LP_STREAK_TINT = vec3(0.4, 0.65, 1.0);
 const float LP_SQUEEZE = LENS_C_SQUEEZE;
 #define LENS_PROJECTION LENS_C_PROJECTION
+#define LENS_PANINI_D LENS_C_PANINI
 const float LP_FISHEYE_K = LENS_C_FISHEYE_K;
 const float LP_K1 = LENS_C_DISTORTION;
 const float LP_K2 = LENS_C_DISTORTION2;
@@ -804,10 +919,16 @@ const float LP_RINGING = 0.2;
 #define LENS_APODIZATION_BETA LENS_C_APODIZATION
 #endif
 
-// 写像: 0 = 直線 (ゲームの描画のまま + 歪曲収差), 1 = 魚眼 (final で再投影する)
+// 写像: 0 = 直線 (ゲームの描画のまま + 歪曲収差), 1 = 魚眼, 2 = パニーニ (どちらも final か TAA で再投影する)
 #ifndef LENS_PROJECTION
 #define LENS_PROJECTION 0
 #endif
+
+// パニーニ投影の強さ d (0 = 直線写像のまま, 1 = 円筒の立体射影。LENS_PROJECTION 2 の時だけ使う)
+#ifndef LENS_PANINI_D
+#define LENS_PANINI_D 0.0
+#endif
+const float LP_PANINI_D = LENS_PANINI_D;
 
 // ボケの瞳の透過率 exp(-β ρp^2) の β (0 = 一様。DoF の composite22 が使う)
 #ifndef LENS_APODIZATION_BETA
@@ -817,9 +938,9 @@ const float LP_APODIZATION = LENS_APODIZATION_BETA;
 
 /*
  * 太陽・月のフレアを出力 (再投影の後) の座標で描く。ゴーストは像面の現象なので、光源の位置も出力へ写す
- * 処方から計算していないプリセット (0 カスタム, 1-6) は、魚眼の写像を使う時を除いて元画像の座標のまま描く
+ * 0 (カスタム) と 1-6 は、魚眼・パニーニの写像を使う時を除いて元画像の座標のまま描く (前からの見た目を変えない。7 以降は出力の座標)
  */
-#if LENS_PROJECTION == 1 || LENS_PRESET >= 7
+#if LENS_PROJECTION != 0 || LENS_PRESET >= 7
 #define LENS_FLARE_OUTPUT_SPACE
 #endif
 

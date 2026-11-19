@@ -24,7 +24,7 @@
   個別の強さ (LENS_C_*) は LENS_PRESET = 0 (カスタム) の時だけ使う
   番号は後ろに足していき、既存の番号は変えない (ユーザーの保存値を保つ)
 */
-#define LENS_PRESET 1 // [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18] 0=カスタム 1=現代の単焦点 2=Helios 44-2 3=Super Takumar 50/1.4 4=Petzval 5=Canon FD 50/1.4 6=アナモルフィック 7=Sonnar 50/1.5 8=Summilux 35/1.4 9=Canon 50/1.2 10=Hologon 15/8 11=Flektogon 20/4 12=Fish-eye Rokkor 16/2.8 13=Gyogyotto 20/8 14=Ultra Wide-Heliar 12/5.6 15=New FD 14/2.8L 16=STF 135/2.8 17=FA 28/2.8 Soft 18=Canon 50/0.95
+#define LENS_PRESET 1 // [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21] 0=カスタム 1=現代の単焦点 2=Helios 44-2 3=Super Takumar 50/1.4 4=Petzval 5=Canon FD 50/1.4 6=アナモルフィック 7=Sonnar 50/1.5 8=Summilux 35/1.4 9=Canon 50/1.2 10=Hologon 15/8 11=Flektogon 20/4 12=Fish-eye Rokkor 16/2.8 13=Gyogyotto 20/8 14=Ultra Wide-Heliar 12/5.6 15=New FD 14/2.8L 16=STF 135/2.8 17=FA 28/2.8 Soft 18=Canon 50/0.95 19=広角 (パニーニ) 20=Trioplan 100/2.8 21=Helios 40-2 85/1.5
 #define LENS_QUALITY 2 // [0 1 2 3] ゴースト数と波長サンプル数
 #define LENS_GLOW_STRENGTH 1.0 // [0.0 0.25 0.5 0.75 1.0 1.25 1.5 2.0 3.0] 明るい物の周りに光が広がる効果 (ブルーム・点像の滲み・フレア・ゴースト・光条・ハロー・グレア・ハレーション・玉ボケの縁) 全体の強さ
 #define LENS_FLARE // 太陽・月のレンズフレア
@@ -66,7 +66,8 @@
 #define LENS_C_SQUEEZE 1.0 // [1.0 1.33 1.5 1.8 2.0] アナモルフィックの圧縮率 (楕円ボケ)
 #define LENS_C_DISTORTION 0.0 // [-0.3 -0.2 -0.15 -0.1 -0.06 -0.03 0.0 0.03 0.06 0.1 0.15 0.2 0.3] 正=樽型 負=糸巻き型
 #define LENS_C_DISTORTION2 0.0 // [-0.3 -0.2 -0.15 -0.1 -0.06 -0.03 0.0 0.03 0.06 0.1 0.15 0.2 0.3] 4 次の歪曲。LENS_C_DISTORTION と逆符号で陣笠型
-#define LENS_C_PROJECTION 0 // [0 1] 0=直線写像 1=魚眼
+#define LENS_C_PROJECTION 0 // [0 1 2] 0=直線写像 1=魚眼 2=パニーニ (高い FOV の左右の端の引き伸ばしを抑える)
+#define LENS_C_PANINI 0.5 // [0.25 0.5 0.75 1.0] パニーニ投影の強さ。0 に近いほど直線写像に近く、1 で円筒の立体射影
 #define LENS_C_FISHEYE_K 0.5 // [-0.5 0.0 0.25 0.5 0.564 0.75 1.0] 魚眼の写像 r = f sin(k θ) / k。-0.5=立体射影 0=等距離 0.5=等立体角 1=正射影
 #define LENS_C_CA 0.3 // [-1.0 -0.5 -0.3 -0.15 0.0 0.15 0.3 0.5 0.75 1.0 1.5 2.0 3.0 4.0] 正=赤い像が大きい 負=青い像が大きい
 #define LENS_C_AXIAL_CA 0.0 // [0.0 0.25 0.5 1.0 1.5 2.0 3.0 4.0]
