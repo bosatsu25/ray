@@ -29,6 +29,11 @@
 #define CAP_CURRENT_PLAYER_ID 1
 #endif
 
+// エンチャントの光沢がエンティティ・手のプログラムの中で描かれ、mc_hasGlint() / mc_sampleGlint() が使える。無い環境: MC 26.3 より前 (光沢は gbuffers_armor_glint で重ねて描かれる)
+#if defined IRIS_INLINE_GLINT
+#define CAP_INLINE_GLINT 1
+#endif
+
 // エンティティを影とボクセルに描く (遮蔽とエンティティの光源)
 #if defined ENTITY_SHADOWS || defined LIGHT_ENTITY_OCCLUSION || defined LIGHT_PLAYER_OCCLUSION || defined ENTITY_LIGHTS
 #define FX_ENTITY_VOXEL 1
@@ -57,6 +62,11 @@
 // 自分を current_player の ID ではなく、プレイヤーの ID と目の位置からの距離で見分ける
 #if !defined CAP_CURRENT_PLAYER_ID
 #define FX_SELF_BY_DISTANCE 1
+#endif
+
+// エンチャントの光沢をエンティティ・手のプログラムの中で足す (gbuffers_armor_glint に来ない環境)
+#if defined CAP_INLINE_GLINT
+#define FX_INLINE_GLINT 1
 #endif
 
 #endif // SETTINGS_CAPABILITIES_GLSL

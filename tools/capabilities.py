@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 # 検出の式で使ってよいローダーのマクロ (直接書き禁止の検査もこの名前を見る)
-LOADER_MACROS = ("MC_VERSION", "IRIS_VERSION", "MAX_COLOR_BUFFERS")
+LOADER_MACROS = ("MC_VERSION", "IRIS_VERSION", "MAX_COLOR_BUFFERS", "IRIS_INLINE_GLINT")
 
 
 @dataclass(frozen=True)
@@ -63,6 +63,11 @@ CAPS: list[Cap] = [
     Cap("CAP_CURRENT_PLAYER_ID", "defined IRIS_VERSION && IRIS_VERSION >= 10800",
         "entity.properties の minecraft:current_player で自分が見分けられる",
         "Iris 1.8 未満と Oculus。自分も他のプレイヤーと同じ minecraft:player で描かれる"),
+    # MC 26.3 はエンチャントの光沢を別の描画で重ねず、本体の描画の中で足す (RenderPipelines の *_GLINT)。Iris は 26.3 の版 (1.11.6) から
+    # IRIS_INLINE_GLINT を定義し、全プログラムに mc_hasGlint() / mc_sampleGlint() を差し込む (GlintTransformer)
+    Cap("CAP_INLINE_GLINT", "defined IRIS_INLINE_GLINT",
+        "エンチャントの光沢がエンティティ・手のプログラムの中で描かれ、mc_hasGlint() / mc_sampleGlint() が使える",
+        "MC 26.3 より前 (光沢は gbuffers_armor_glint で重ねて描かれる)"),
 ]
 
 ENTITY_VOXEL_SETTINGS = "defined ENTITY_SHADOWS || defined LIGHT_ENTITY_OCCLUSION || defined LIGHT_PLAYER_OCCLUSION || defined ENTITY_LIGHTS"
@@ -83,6 +88,8 @@ FXS: list[Fx] = [
        "花火の火花の発光と花火の光を gbuffers_particles でも扱う (火花が不透明のパーティクルで来る環境)"),
     Fx("FX_SELF_BY_DISTANCE", "!defined CAP_CURRENT_PLAYER_ID",
        "自分を current_player の ID ではなく、プレイヤーの ID と目の位置からの距離で見分ける"),
+    Fx("FX_INLINE_GLINT", "defined CAP_INLINE_GLINT",
+       "エンチャントの光沢をエンティティ・手のプログラムの中で足す (gbuffers_armor_glint に来ない環境)"),
 ]
 
 
@@ -110,6 +117,19 @@ INTERNAL_FORMATS_1_7 = frozenset({
 })
 
 
+# Iris が本文に掛ける書き換え。出典は Iris のソースの 26.2 / 26.3 ブランチ (pipeline/transform/transformer)
+# - TRANSFORM_REVERSE_Z (Iris 1.11.4+26.2 以降、DepthTransformer): MC 26.2 から深度が逆 Z になり、Iris は depthtex0-2 の読み出しを
+#   `1.0 - 値` に、gl_FragCoord.z と gl_FragDepth を反転に、gl_Position.z を最後のジオメトリ段の終わりで逆 Z に書き換える。
+#   行列の uniform は順 Z のまま届く。書き換えは名前で探すので、深度のサンプラーを組み込みのテクスチャ関数か
+#   sampler2D の引数以外に渡すと、逆 Z の生の値を読む
+# - TRANSFORM_INLINE_GLINT (Iris 1.11.6+26.3 以降、GlintTransformer): 全プログラムの全ステージに mc_hasGlint() / mc_sampleGlint() を差し込む
+TRANSFORM_REVERSE_Z = "reverse_z"
+TRANSFORM_INLINE_GLINT = "inline_glint"
+
+FEATURES_1_11 = FEATURES_1_7 | {"CAN_DISABLE_WEATHER", "FADE_VARIABLE", "TEXTURE_FILTERING"}
+PIXEL_TYPES_1_11 = PIXEL_TYPES_1_7 | {"UNSIGNED_INT_10F_11F_11F_REV"}
+
+
 @dataclass(frozen=True)
 class Env:
     """
@@ -127,15 +147,22 @@ class Env:
     pixel_types: frozenset[str] = PIXEL_TYPES_1_7
     pixel_formats: frozenset[str] = PIXEL_FORMATS_1_7
     internal_formats: frozenset[str] = INTERNAL_FORMATS_1_7
+    # このローダーが本文に掛ける書き換え (TRANSFORM_*)。検証はこれを再現し、書き換えが効かない書き方を探す
+    transforms: frozenset[str] = frozenset()
     note: str = ""
 
 
 ENVS: list[Env] = [
-    # MC_VERSION は 26.1.2 (Iris の書式は 大 + 中 2 桁 + 小 2 桁 で 260102)。1.21.x の Iris 1.10 は火花を不透明で描くので mid と同じ側
-    Env("latest", {"MC_VERSION": "260102", "IRIS_VERSION": "11100", "MAX_COLOR_BUFFERS": "32"}, 32, 12,
-        features=FEATURES_1_7 | {"CAN_DISABLE_WEATHER", "FADE_VARIABLE", "TEXTURE_FILTERING"},
-        pixel_types=PIXEL_TYPES_1_7 | {"UNSIGNED_INT_10F_11F_11F_REV"},
-        note="Iris 1.10.5 以降 (colortex 32 枚、bufferObject 0-12 は 1.21.11 / 26.x)"),
+    # MC_VERSION は 26.3 (Iris の書式は 大 + 中 2 桁 + 小 2 桁 で 260300)、IRIS_VERSION は 1.11.6。値なしのマクロは空文字で持つ
+    # 26.2 (Iris 1.11.4) は逆 Z の書き換えだけがあり、マクロから決まる本文は 26.1 と同じなので、本文は 26.1、書き換えはここで見る
+    Env("latest", {"MC_VERSION": "260300", "IRIS_VERSION": "11106", "MAX_COLOR_BUFFERS": "32", "IRIS_INLINE_GLINT": ""}, 32, 12,
+        features=FEATURES_1_11, pixel_types=PIXEL_TYPES_1_11,
+        transforms=frozenset({TRANSFORM_REVERSE_Z, TRANSFORM_INLINE_GLINT}),
+        note="Iris 1.11.6 以降 (MC 26.3。逆 Z の書き換えと、本体の中で描くエンチャントの光沢)"),
+    # MC_VERSION は 26.1.2。1.21.x の Iris 1.10 は火花を不透明で描くので mid と同じ側
+    Env("26.1", {"MC_VERSION": "260102", "IRIS_VERSION": "11100", "MAX_COLOR_BUFFERS": "32"}, 32, 12,
+        features=FEATURES_1_11, pixel_types=PIXEL_TYPES_1_11,
+        note="Iris 1.10.5〜1.11.x (colortex 32 枚、bufferObject 0-12 は 1.21.11 / 26.1。光沢は gbuffers_armor_glint)"),
     # Iris 1.8〜1.10.4 の flag と pixel type の列挙は確かめていないので、1.7 と同じものに絞る
     Env("mid", {"MC_VERSION": "12101", "IRIS_VERSION": "10800"}, 16, 8,
         note="Iris 1.8〜1.10.4 (shadow_entities はあり、colortex は 16 枚)"),
