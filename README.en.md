@@ -465,13 +465,15 @@ Handheld lights are not added to the floodfill, so that they are not counted twi
 - [ ] Light source issues
   - [ ] Reduce flickering in places crowded with light sources (a light bin holds at most 64 lights, and lights outside the top picks are chosen by probability every frame)
     - [x] Stratify the pick over time (when 8 or fewer lights are left over, they are visited in turn. With dozens, the gain is small)
-    - [ ] Add reuse that carries the picked light over from the previous frame (needs a buffer that keeps history)
+    - [ ] Add reuse that shares samples between pixels (carrying the pick over from the previous frame alone was checked numerically and increases flicker once combined with the denoiser)
     - [ ] Check the look in the game
   - [ ] Add light source shadows to translucent surfaces
     - [x] The "Light Shadows on Translucents" setting adds direct light and shadows from light sources to glass and water (OFF by default)
     - [ ] Check the look and cost in the game and assign it to presets
   - [x] Register light from block entities such as ender chests as voxel light sources
-  - [ ] Make light blocks (`minecraft:light`) light sources (they have no model to draw, so no vertices arrive and the current method cannot find them)
+  - [ ] Emit light from light blocks (`minecraft:light`) (they have no model to draw, so no vertices arrive and they cannot be registered as light sources)
+    - [x] The "Fill Unregistered Light" setting fills in only the brightness from the vanilla lightmap (no shadows or color. OFF by default)
+    - [ ] Check the brightness balance in the game
   - [x] Make stairs block light in their oriented shape (only inner corners are approximated by the straight stair shape)
   - [ ] Support glowing blocks from mods
     - [x] Turn unregistered glowing blocks into generic light sources from their light level and texture color

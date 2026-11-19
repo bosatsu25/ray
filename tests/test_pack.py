@@ -197,6 +197,8 @@ def test_forward_declared_functions_are_defined(shaders, glslang):
 OPTION_VARIANTS = [
     ({"LIGHT_TRANSLUCENT_SHADOWS": True}, ["gbuffers_water.fsh"]),
     ({"LIGHT_PICK_STRATIFIED": False}, ["deferred1.csh"]),
+    ({"LIGHT_LIGHTMAP_FILL": True}, ["deferred1.csh"]),
+    ({"LIGHT_LIGHTMAP_FILL": True, "LIGHT_TRACE_COUNT": "1"}, ["deferred1.csh"]),
     ({"LIGHT_PICK_STRATIFIED": True, "LIGHT_TRACE_COUNT": "1"}, ["deferred1.csh"]),
     ({"MOD_BLOCK_LIGHTS": False}, ["shadow.vsh", "shadow_solid.vsh", "gbuffers_terrain.vsh"]),
     ({"LENS_PRESET": "0", "LENS_C_PROJECTION": "2"}, ["final.fsh", "composite20.fsh", "composite22.fsh", "composite25.csh"]),

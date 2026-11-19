@@ -31,6 +31,7 @@
 #define LIGHT_TRANSLUCENT_TINT // 色ガラス越しの光の色付け
 #define LIGHT_SPECULAR // ブロックライトの鏡面反射
 #define LIGHT_PICK_STRATIFIED // 上位から漏れた光源のくじを時間方向に層別化して、光源の多い所のちらつきを減らす (OFF は毎フレーム独立の乱数)
+//#define LIGHT_LIGHTMAP_FILL // 登録の無い光 (ライトブロックなど) をバニラのライトマップで補う。影も色も付かない。実機で確かめていないので既定は OFF
 //#define LIGHT_TRANSLUCENT_SHADOWS // 半透明の面 (ガラス・水) にも設置光源の直接光と影を付ける。実機で重さを測っていないので既定は OFF
 #define LIGHT_DENOISE 2 // [0 1 2] 0=なし 1=時間 2=時間+空間
 #define LIGHT_ENTITY_OCCLUSION // エンティティがブロックライトを遮る

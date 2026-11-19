@@ -93,6 +93,8 @@ layout(local_size_x = 8, local_size_y = 8) in;
 #else
     const int DET_COUNT = 1;
 #endif
+// LIGHT_LIGHTMAP_FILL で、登録済みの光源の照度がライトマップの照度のこの逆数に届いたら補わない (届かない分を線形に補う)
+const float LIGHTMAP_FILL_REGISTERED_GAIN = 4.0;
 // くじの層の数の上限。多いほど残りの光源を 1 つずつ確実に回れるが、1 周に掛かるフレームが延びてデノイズの履歴 (十数フレーム) に収まらなくなる
 const int LIGHT_PICK_STRATA = 8;
 const float R1_STEP = 0.618033988749895;
@@ -292,6 +294,24 @@ void main() {
             vec3 farE = max(restTotal - pickE, vec3(0.0));
             shadowed += farE * (luminance(shadowed) / max(luminance(unshadowed), EPS));
             unshadowed += farE;
+        }
+    #endif
+    #ifdef LIGHT_LIGHTMAP_FILL
+        /*
+         * 登録の無い光をバニラのライトマップで補う。ライトブロック (minecraft:light) は描くモデルが無く頂点が来ないので、ボクセルに書けず
+         * 光源にできない。光源の上限から漏れた光源も同じく届かない。バニラのライトマップにはどちらの光も入っているので、
+         * この画素に届く登録済みの光源の照度 (影を掛ける前の合計) で説明できない分だけを、向きと影の無い光として足す
+         * 影を掛ける前の合計と比べるのは、ライトマップが壁の影を知らないため (影の中を埋めて光源の影を消さないように)
+         * ライトマップの照度と光源の照度は減衰の式が違うので、登録済みの光がライトマップの 1 / LIGHTMAP_FILL_REGISTERED_GAIN あれば補わない
+         */
+        vec3 registered = restTotal;
+        for (int j = 0; j < DET_COUNT; j++) registered += topE[j];
+        vec3 vanilla = blockLightmapFallback(unpack2x8(texelFetch(colortex2, src, 0).a).x);
+        float vanillaLum = luminance(vanilla);
+        if (vanillaLum > 0.0) {
+            vec3 fill = vanilla * saturate(1.0 - LIGHTMAP_FILL_REGISTERED_GAIN * luminance(registered) / vanillaLum);
+            shadowed += fill;
+            unshadowed += fill;
         }
     #endif
     }

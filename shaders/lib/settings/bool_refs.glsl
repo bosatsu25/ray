@@ -40,6 +40,8 @@
 #endif
 #ifdef LIGHT_PICK_STRATIFIED
 #endif
+#ifdef LIGHT_LIGHTMAP_FILL
+#endif
 #ifdef LIGHT_TRANSLUCENT_SHADOWS
 #endif
 #ifdef LIGHT_ENTITY_OCCLUSION
