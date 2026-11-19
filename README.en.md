@@ -6,8 +6,8 @@ English | [日本語](README.md)
 ![Iris](https://img.shields.io/badge/Iris-1.7%2B-5b6ee1)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1%20%E2%80%93%2026.x-62b47a)
 ![License](https://img.shields.io/badge/license-Ray%20Shader%20License%201.0-lightgrey)
-![Downloads](https://img.shields.io/github/downloads/kuwacom/ray/total)
-![Views](https://hits.sh/github.com/kuwacom/ray.svg?label=views)
+![Downloads](https://img.shields.io/github/downloads/bosatsu25/ray/total)
+![Views](https://hits.sh/github.com/bosatsu25/ray.svg?label=views)
 
 Ray is a shader pack for Minecraft Java Edition with Iris. I originally built it privately for myself, packing in every feature I wanted that other shaders don't have  
 It features light sources traced with voxel ray tracing, and a physical lens simulation that reproduces real lenses
@@ -79,7 +79,7 @@ Older Iris versions differ from newer ones in the following ways (newer Iris ver
 
 ## Installation
 
-Download `Ray-<version>-<commit>-nightly.zip` from the [nightly release](https://github.com/kuwacom/ray/releases/tag/nightly). The nightly is an alpha build of the latest `main`, and it is replaced whenever `shaders/` or similar files change
+Download `Ray-<version>-<commit>-nightly.zip` from the [nightly release](https://github.com/bosatsu25/ray/releases/tag/nightly). The nightly is an alpha build of the latest `main`, and it is replaced whenever `shaders/` or similar files change
 
 1. Download the zip (you do not need to extract it)
 2. Put the zip into `<Minecraft instance>\shaderpacks\`

@@ -6,8 +6,8 @@
 ![Iris](https://img.shields.io/badge/Iris-1.7%2B-5b6ee1)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1%20%E2%80%93%2026.x-62b47a)
 ![License](https://img.shields.io/badge/license-Ray%20Shader%20License%201.0-lightgrey)
-![Downloads](https://img.shields.io/github/downloads/kuwacom/ray/total)
-![Views](https://hits.sh/github.com/kuwacom/ray.svg?label=views)
+![Downloads](https://img.shields.io/github/downloads/bosatsu25/ray/total)
+![Views](https://hits.sh/github.com/bosatsu25/ray.svg?label=views)
 
 Rayは元々私が欲しかった他のシェーダーにない機能を全て詰め込んだプライベートに作られた Minecraft Java Edition - Iris 向けのシェーダーパックです  
 このシェーダーには、ボクセルレイトレースによる光源処理と実在レンズを再現するフィジカルレンズシミュレーションを搭載しています
@@ -77,7 +77,7 @@ Helios 44-2 や Sonnar のようなオールドレンズから、Hologon や Fle
 
 ## 導入
 
-[Releases の nightly](https://github.com/kuwacom/ray/releases/tag/nightly) から `Ray-<バージョン>-<コミット>-nightly.zip` をダウンロードして入れます。nightly は `main` の最新を反映したアルファ版で、`shaders/` などが変わるたびに置き換わります
+[Releases の nightly](https://github.com/bosatsu25/ray/releases/tag/nightly) から `Ray-<バージョン>-<コミット>-nightly.zip` をダウンロードして入れます。nightly は `main` の最新を反映したアルファ版で、`shaders/` などが変わるたびに置き換わります
 
 1. zip をダウンロードします (展開は不要です)
 2. zip を `<Minecraft のインスタンス>\shaderpacks\` に置きます
