@@ -20,6 +20,7 @@
 //@include "/lib/surface/water_self.glsl"
 //@include "/lib/surface/generated_normal.glsl"
 //@include "/lib/light/hand_pose.glsl"
+//@include "/lib/settings/capabilities.glsl"
 #if defined GBUF_PARTICLES_TRANSLUCENT && defined FIREWORK_GLOW
     //@include "/lib/surface/particle_glow.glsl"
 #endif
@@ -428,6 +429,13 @@ void main() {
     if (isTintBlock(blockId)) tintIndex = getTintIndex(blockId) + 1;
 #endif
 
+#if defined FX_INLINE_GLINT && (defined GBUF_ENTITIES_TRANSLUCENT || defined GBUF_HAND_WATER)
+    // MC 26.3 は着た鎧・半透明のアイテムの光沢もこの描画の中で足す。deferred の後なので、重ね描きの時 (gbuffers_overlay.fsh) と同じ明るさの発光として足す
+    if (mc_hasGlint()) {
+        vec3 glint = mc_sampleGlint();
+        color += glint * glint * (getVisibleEmissionLuminance() * EMISSION_STRENGTH);
+    }
+#endif
     outColor = vec4(color, albedo.a);
 #ifndef GBUF_PARTICLES_TRANSLUCENT
     outData = encodeTranslucentDataTint(geoNormal, lmcoord, materialId, tintIndex);

@@ -16,7 +16,7 @@
     //@include "/lib/settings/capabilities.glsl"
     //@include "/lib/surface/lightning.glsl"
 #endif
-#ifdef GBUF_PARTICLES
+#if defined GBUF_PARTICLES || defined GBUF_HAND
     //@include "/lib/settings/capabilities.glsl"
 #endif
 #if defined GBUF_PARTICLES && defined FX_SPARKS_IN_PARTICLES && defined FIREWORK_GLOW
@@ -77,7 +77,7 @@
     #include "/lib/settings/capabilities.glsl"
     #include "/lib/surface/lightning.glsl"
 #endif
-#ifdef GBUF_PARTICLES
+#if defined GBUF_PARTICLES || defined GBUF_HAND
     #include "/lib/settings/capabilities.glsl"
 #endif
 #if defined GBUF_PARTICLES && defined FX_SPARKS_IN_PARTICLES && defined FIREWORK_GLOW
@@ -623,6 +623,14 @@ void main() {
 #if defined GBUF_TERRAIN && DECORATIVE_BLOCK_LIGHTS > 0
     // 鉱物ブロック (DECORATIVE_BLOCK_LIGHTS)。光源ブロックより弱く、模様の明るい所ほど光らせる
     if (isDecorGlowBlock(blockBase)) g.emission = max(g.emission, DECOR_EMISSION * smoothstep(0.15, 0.85, maxOf(albedoDry)));
+#endif
+#if defined FX_INLINE_GLINT && (defined GBUF_ENTITIES || defined GBUF_HAND)
+    // MC 26.3 はエンチャントの光沢を重ね描き (gbuffers_armor_glint) にせず、本体と同じ描画の中で足す。ここで足さないと光沢が消える
+    // 重ね描きの時のブレンド (SRC_COLOR ONE) と同じく、光沢の色の 2 乗をアルベドに足す
+    if (mc_hasGlint()) {
+        vec3 glint = mc_sampleGlint();
+        g.albedo = min(g.albedo + glint * glint, vec3(1.0));
+    }
 #endif
     encodeGBuffer(g, outAlbedo, outNormal, outMaterial);
     outMaterial.a = encodeSurfaceExtra(pomShadow, puddle);

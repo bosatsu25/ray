@@ -64,8 +64,9 @@ import gen_includes  # noqa: E402
 import gen_settings  # noqa: E402
 import gen_wrappers  # noqa: E402
 import include_deps  # noqa: E402
+import iris_transforms  # noqa: E402
 import loader_checks  # noqa: E402
-from capabilities import ENVS, Env  # noqa: E402
+from capabilities import ENVS, TRANSFORM_INLINE_GLINT, TRANSFORM_REVERSE_Z, Env  # noqa: E402
 from gen_settings import CONST_RE, DEFINE_RE, Option  # noqa: E402
 from lib.paths import ROOT, SHADERS  # noqa: E402
 from lib.properties import disabled_programs, read_properties_logical_lines, resolve_profile  # noqa: E402
@@ -100,6 +101,10 @@ RENDER_STAGES = [
 ]
 
 # バージョンで変わるマクロ (MC_VERSION / IRIS_VERSION / MAX_COLOR_BUFFERS) は capabilities.ENVS のローダーごとに入れる
+# Iris 1.11.6+26.3 の GlintTransformer が全ステージに差し込む関数。光沢の無い描画の定義 (false / 0) で再現する
+INLINE_GLINT_DECLS = ["bool mc_hasGlint();", "vec3 mc_sampleGlint();"]
+INLINE_GLINT_DEFS = ["bool mc_hasGlint() { return false; }", "vec3 mc_sampleGlint() { return vec3(0.0); }"]
+
 IRIS_MACROS = {
     "MC_GL_VERSION": "460",
     "MC_GLSL_VERSION": "460",
@@ -325,8 +330,13 @@ def build_source(wrapper: Path, overrides: dict[str, str | bool], options: dict[
     inject = [f"#define {k} {v}".rstrip() for k, v in {**IRIS_MACROS, **env.macros}.items()]
     inject += [f"#define MC_RENDER_STAGE_{s} {i}" for i, s in enumerate(RENDER_STAGES)]
     inject += [f"#define IRIS_FEATURE_{f}" for f in features]
-    out = [lines[0]] + inject + lines[1:]
-    lm = [linemap[0]] + [("<iris>", 0)] * len(inject) + linemap[1:]
+    # Iris が本文に差し込む関数 (宣言は先頭、定義は末尾)。無いローダーでは本体が呼ぶとコンパイルが落ちるので、そのまま検出できる
+    tail = []
+    if TRANSFORM_INLINE_GLINT in env.transforms:
+        inject += INLINE_GLINT_DECLS
+        tail = INLINE_GLINT_DEFS
+    out = [lines[0]] + inject + lines[1:] + tail
+    lm = [linemap[0]] + [("<iris>", 0)] * len(inject) + linemap[1:] + [("<iris>", 0)] * len(tail)
     return "\n".join(out) + "\n", lm
 
 
@@ -456,7 +466,14 @@ def scan_one(shaders: str, wrapper: str, cfg_name: str, overrides: dict, env_nam
     env = env_named(env_name)
     path = Path(wrapper)
     src, linemap = build_source(path, overrides, options, features, env)
-    return f"[{env.name}/{cfg_name}]", loader_checks.program_scan(env, cfg_name, f"{path.parent.name}/{path.name}", src, linemap)
+    program = f"{path.parent.name}/{path.name}"
+    uses, problems = loader_checks.program_scan(env, cfg_name, program, src, linemap)
+    # 逆 Z の書き換えは名前で探すので、マクロを展開した本文で見る (深度を読まないプログラムは展開も省く)
+    if TRANSFORM_REVERSE_Z in env.transforms and iris_transforms.DEPTH_NAME_RE.search(src):
+        text = iris_transforms.expand_macros(find_glslang(), src, STAGE_OF_EXT[path.suffix])
+        if text is not None:
+            problems = problems + iris_transforms.reverse_z_problems(program, text)
+    return f"[{env.name}/{cfg_name}]", (uses, problems)
 
 
 def properties_checks() -> list[str]:
@@ -493,6 +510,7 @@ def static_checks(options: dict[str, Option], profiles: dict[str, list[str]]) ->
     problems += gen_capabilities.check(SHADERS)
     problems += loader_checks.rendertargets_spacing(SHADERS)
     problems += loader_checks.direct_loader_macros(SHADERS)
+    problems += iris_transforms.reserved_identifiers(SHADERS)
     for pname in profiles:
         for k, v in resolve_profile(pname, profiles).items():
             opt = options.get(k)
