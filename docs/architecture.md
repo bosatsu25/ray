@@ -517,6 +517,7 @@ gbuffers で `blockIdToMaterial()` / `entityIdToMaterial()` (lib/ids/id_decode.g
 | LIGHT_EMISSION_MASK_MODE | 0 | 0 | 0 | 0 | 0 | 0 | **1** | **2** | **2** | **2** |
 | LIGHT_TRANSLUCENT_TINT | ON | **OFF** | **OFF** | ON | ON | ON | ON | ON | ON | ON |
 | LIGHT_SPECULAR | ON | **OFF** | **OFF** | ON | ON | ON | ON | ON | ON | ON |
+| LIGHT_TRANSLUCENT_SHADOWS | OFF | OFF | OFF | OFF | OFF | OFF | OFF | OFF | OFF | OFF |
 | LIGHT_DENOISE | 2 | **1** | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
 | LIGHT_ENTITY_OCCLUSION | ON | **OFF** | ON | ON | ON | ON | ON | ON | ON | ON |
 | LIGHT_PLAYER_OCCLUSION | ON | **OFF** | ON | ON | ON | ON | ON | ON | ON | ON |

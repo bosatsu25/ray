@@ -101,6 +101,28 @@ const int BLOCK_ENTITY_ID_NONE = 0;
 const int BLOCK_ENTITY_ID_BLOCK_ITEM = 1;
 bool isBlockEntityDraw(int beId) { return beId != BLOCK_ENTITY_ID_NONE && beId != BLOCK_ENTITY_ID_BLOCK_ITEM; }
 
+/*
+ * 未登録のブロック (block.properties に無い MOD のブロック。mc_Entity.x は 0 以下) のうち光るものを、汎用の光源の ID に替える
+ * Iris はどのブロックの頂点にも発光レベルを入れる (at_midBlock.w) ので、名前を登録しなくても光ることは分かる。色は表に無いので、
+ * テクスチャの平均の色 (アトラスの粗い mip) の色相で 8 種類 (LIGHT_MOD_FIRST から 白・赤・橙・黄・緑・水色・青・マゼンタ) に分ける
+ * avgSrgb: ブロックの面のテクスチャの平均の色 (sRGB)
+ */
+const float MOD_LIGHT_MIN_SATURATION = 0.25; // これより薄い色は白い光にする (彩度 = (最大 - 最小) / 最大)
+bool isUnregisteredBlock(int rawBlockId) { return rawBlockId <= 0; }
+int modLightBlockId(vec3 avgSrgb) {
+    float mx = maxOf(avgSrgb);
+    float chroma = mx - min(avgSrgb.r, min(avgSrgb.g, avgSrgb.b));
+    if (chroma <= MOD_LIGHT_MIN_SATURATION * mx) return BLOCK_LIGHT_BASE + LIGHT_MOD_FIRST;
+    // 色相 (度)。赤 0・黄 60・緑 120・水色 180・青 240・マゼンタ 300
+    float hue = avgSrgb.r >= mx ? (avgSrgb.g - avgSrgb.b) / chroma
+              : avgSrgb.g >= mx ? 2.0 + (avgSrgb.b - avgSrgb.r) / chroma
+              : 4.0 + (avgSrgb.r - avgSrgb.g) / chroma;
+    hue = mod(hue * 60.0 + 360.0, 360.0);
+    // 光源に多い橙 (たいまつの色) を赤と黄から分ける
+    int k = hue < 15.0 ? 1 : hue < 45.0 ? 2 : hue < 90.0 ? 3 : hue < 150.0 ? 4 : hue < 210.0 ? 5 : hue < 270.0 ? 6 : hue < 345.0 ? 7 : 1;
+    return BLOCK_LIGHT_BASE + LIGHT_MOD_FIRST + k;
+}
+
 bool isTintBlock(int blockId) { return blockId >= 200 && blockId < 300; }
 int getTintIndex(int blockId) { return blockId - 200; }
 int getShapeIndex(int blockId) { return blockId - 300; }

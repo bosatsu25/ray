@@ -116,6 +116,8 @@
 #ifdef GBUF_TERRAIN
     in vec2 mc_Entity;
     in vec4 at_midBlock;
+    // shadow_terrain.vsh と同じ値 (スプライト 1 枚が 1 テクセルになる mip)
+    const float MOD_LIGHT_TEXTURE_LOD = 4.0;
 #endif
 #if defined GBUF_TERRAIN || defined GBUF_ENTITIES || defined GBUF_HAND || defined GBUF_BLOCK
     in vec2 mc_midTexCoord;
@@ -166,6 +168,12 @@ void main() {
     if (any(greaterThan(midUv, vec2(2.0)))) midUv = uintBitsToFloat(uvec2(midUv * MID_UV_FIXED_SCALE)) / MID_UV_FIXED_SCALE;
     tileMid = midUv;
     tileHalf = abs(texcoord - midUv);
+    #ifdef MOD_BLOCK_LIGHTS
+        // 未登録の光るブロック (MOD) は、影のパス (shadow_terrain.vsh) がボクセルに書くのと同じ汎用の光源の ID にして、面の明るい画素を光らせる
+        if (isUnregisteredBlock(blockId) && at_midBlock.w > 0.5) {
+            blockId = modLightBlockId(textureLod(gtexture, midUv, MOD_LIGHT_TEXTURE_LOD).rgb * gl_Color.rgb);
+        }
+    #endif
 #elif defined GBUF_ENTITIES || defined GBUF_HAND || defined GBUF_BLOCK
     blockId = 0;
     tileMid = mc_midTexCoord;

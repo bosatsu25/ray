@@ -42,6 +42,7 @@ const int SL_BLOCK_OPAQUE = 1;            // colortex6 の直接光 + floodfill 
 const int SL_BLOCK_FORWARD = 2;           // floodfill だけ
 const int SL_BLOCK_FORWARD_ENTITY = 3;    // ビンの光源を直接トレース
 const int SL_BLOCK_HIT_FLOOD = 4;         // 2 次ヒットの floodfill だけ
+const int SL_BLOCK_FORWARD_TRACED = 5;    // ビンの光源を直接トレース (照り返しの補いなし。半透明の面)
 
 // 足す項 (組み合わせ)
 const uint SL_SUN_CONTACT = 1u << 0;
@@ -159,8 +160,9 @@ struct SurfaceLights {
  * 設置光源のトレースの 1 ステップごとに残り、半透明のエンティティなど前方シェーディングの画素が遅くなった
  * 番号の並び: 鏡面 -> ビンの光源 (FORWARD_TRACED_LIGHTS 個トレースしたら打ち切るので最後)
  * specular / bins はリテラルでも実行時の値 (p.blockSpecular) でもよい
+ * bounceFill: GI の代わりの照り返しを足すか (GI の無い不透明物だけ。半透明の面は透けた奥が見えるので足さない)
  */
-void gatherBlockTracedLights(SurfacePoint p, bool specular, bool bins, inout SurfaceLights L) {
+void gatherBlockTracedLights(SurfacePoint p, bool specular, bool bins, bool bounceFill, inout SurfaceLights L) {
     for (int j = 0; j < BLOCKLIGHT_SPECULAR_LIGHTS; j++) L.blockSpec[j] = noLight();
     int bin = 0;
     int specCount = 0;
@@ -225,7 +227,7 @@ void gatherBlockTracedLights(SurfacePoint p, bool specular, bool bins, inout Sur
         }
     }
     L.blockSpecCount = specCount;
-    if (bins) L.block = forwardEntityBlockLight(p.playerPos, p.geoNormal, p.lightmap.x, direct, bounce);
+    if (bins) L.block = forwardEntityBlockLight(p.playerPos, p.geoNormal, p.lightmap.x, direct, bounceFill ? bounce : vec3(0.0));
 }
 
 SurfaceLights gatherSurfaceLights(SurfacePoint p, int sunMode, int blockMode, uint terms) {
@@ -295,9 +297,9 @@ SurfaceLights gatherSurfaceLights(SurfacePoint p, int sunMode, int blockMode, ui
         L.handOff = noLight();
     }
     // 設置光源のトレース (鏡面とビンの光源) は同じ呼び出しで集めるとトレースが 1 か所になる
-    bool tracedBins = blockMode == SL_BLOCK_FORWARD_ENTITY;
+    bool tracedBins = blockMode == SL_BLOCK_FORWARD_ENTITY || blockMode == SL_BLOCK_FORWARD_TRACED;
     if ((terms & SL_BLOCK_SPECULAR_TRACED) != 0u || tracedBins) {
-        gatherBlockTracedLights(p, (terms & SL_BLOCK_SPECULAR_TRACED) != 0u && p.blockSpecular, tracedBins, L);
+        gatherBlockTracedLights(p, (terms & SL_BLOCK_SPECULAR_TRACED) != 0u && p.blockSpecular, tracedBins, blockMode == SL_BLOCK_FORWARD_ENTITY, L);
     }
     if ((terms & SL_BLOCK_SPECULAR) != 0u) L.blockSpecCount = getBlockLightSpecular(p.texel, p.playerPos, p.geoNormal, L.blockSpec);
 

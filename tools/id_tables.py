@@ -226,6 +226,19 @@ LIGHTS: list[Light] = [
     Light(70, "LIGHT_POTTED_EYEBLOSSOM", "potted open eyeblossom",
           "vec3(1.0, 0.65, 0.35), EYEBLOSSOM_BRIGHTNESS * 0.2, 3.0, 0.3, vec3(0.5, 0.7, 0.5), 0.0, LT_FLOOD",
           blocks=_lit("potted_open_eyeblossom"), kind="eyeblossom"),
+    # block.properties に無いブロック (MOD のブロック) のうち光るもの。名前では登録できないので、シェーダーが頂点の発光レベル (at_midBlock.w) と
+    # テクスチャの平均の色から選ぶ (lib/ids/id_decode.glsl の modLightBlockId)。ボクセルには ID の 12bit しか入らず色を持てないので、色相で 8 種類に分ける
+    # 未登録のブロックは完全な固体として遮るので LT_OCC。明るさは発光レベルで決まる (既定の 15 は使われない)
+    Light(71, "LIGHT_MOD_FIRST", "unregistered glowing block (white)", "vec3(1.00, 0.93, 0.82), 1.0, 15.0, 0.5, LT_CENTER, 0.0, LT_OCC",
+          comment="71-78: 未登録の光るブロック (白・赤・橙・黄・緑・水色・青・マゼンタ)。MOD_BLOCK_LIGHTS の時だけ使う",
+          label="LIGHT_MOD_FIRST + 0"),
+    Light(72, None, "unregistered glowing block (red)", "vec3(1.00, 0.25, 0.15), 1.0, 15.0, 0.5, LT_CENTER, 0.0, LT_OCC", label="LIGHT_MOD_FIRST + 1"),
+    Light(73, None, "unregistered glowing block (orange)", "vec3(1.00, 0.62, 0.30), 1.0, 15.0, 0.5, LT_CENTER, 0.0, LT_OCC", label="LIGHT_MOD_FIRST + 2"),
+    Light(74, None, "unregistered glowing block (yellow)", "vec3(1.00, 0.86, 0.40), 1.0, 15.0, 0.5, LT_CENTER, 0.0, LT_OCC", label="LIGHT_MOD_FIRST + 3"),
+    Light(75, None, "unregistered glowing block (green)", "vec3(0.35, 1.00, 0.40), 1.0, 15.0, 0.5, LT_CENTER, 0.0, LT_OCC", label="LIGHT_MOD_FIRST + 4"),
+    Light(76, None, "unregistered glowing block (cyan)", "vec3(0.35, 0.95, 1.00), 1.0, 15.0, 0.5, LT_CENTER, 0.0, LT_OCC", label="LIGHT_MOD_FIRST + 5"),
+    Light(77, None, "unregistered glowing block (blue)", "vec3(0.30, 0.45, 1.00), 1.0, 15.0, 0.5, LT_CENTER, 0.0, LT_OCC", label="LIGHT_MOD_FIRST + 6"),
+    Light(78, None, "unregistered glowing block (magenta)", "vec3(0.90, 0.40, 1.00), 1.0, 15.0, 0.5, LT_CENTER, 0.0, LT_OCC", label="LIGHT_MOD_FIRST + 7"),
 
     Light(128, "LIGHT_ITEM_LAVA_BUCKET", "lava bucket", "LAVA_SRGB, 1.0, 15.0, 0.2, LT_CENTER, 0.2, LT_CAT_ITEM", items=_lit("lava_bucket")),
     Light(129, "LIGHT_ITEM_GLOWSTONE_DUST", "glowstone dust", "vec3(1.0, 0.80, 0.52), 0.7, 8.0, 0.1, LT_CENTER, 0.0, LT_CAT_ITEM", items=_lit("glowstone_dust")),
