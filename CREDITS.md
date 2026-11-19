@@ -13,6 +13,8 @@
 | PCG ハッシュ | Jarzynski & Olano, "Hash Functions for GPU Rendering", JCGT 2020 | lib/common/noise.glsl |
 | Interleaved Gradient Noise | Jimenez, "Next Generation Post Processing in Call of Duty: Advanced Warfare", SIGGRAPH 2014 | lib/common/noise.glsl |
 | R2 低食い違い列 | Roberts, "The Unreasonable Effectiveness of Quasirandom Sequences", 2018 | lib/common/noise.glsl |
+| 1 個の一様乱数で引く重み付きリザーバ (当たり・外れの区間の中の位置へ乱数を写し直す) と、時間方向の層別化 | Chao, "A General Purpose Unequal Probability Sampling Plan", Biometrika 1982 (重み付きリザーバ)、Pharr, Jakob & Humphreys, "Physically Based Rendering" 第 4 版 A.4 (乱数の写し直し) | program/light/block_light_trace.csh |
+| パニーニ投影 (円筒への立体射影) | Sharpless, Postle & German, "Pannini: A New Projection for Rendering Wide Angle Perspective Images", Computational Aesthetics 2010 | lib/post/lens_optics.glsl |
 | 八面体法線エンコード | Cigolle et al., "A Survey of Efficient Representations for Independent Unit Vectors", JCGT 2014 | lib/common/encoding.glsl |
 | 正規直交基底 | Duff et al., "Building an Orthonormal Basis, Revisited", JCGT 2017 | lib/common/math.glsl |
 | 球面調和の放射照度 | Ramamoorthi & Hanrahan, "An Efficient Representation for Irradiance Environment Maps", SIGGRAPH 2001 | lib/sky/sh.glsl |

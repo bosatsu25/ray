@@ -64,6 +64,8 @@ uv sync
 | `mc.py` | ゲームの外から手順 (JSON 配列) を送り、結果と、その間に `latest.log` に出たシェーダー関連の行を表示します |
 | `run_scene.py` | `scenes.json` に書いた定点シーンを再現して撮影します |
 | `ab_scene.py` | 同じ場面に立ったまま、設定やパックのフォルダを替えて再読み込みと撮影を繰り返し、揺れの基準 (同じ版の 2 回の差)・前後の差・比較シートを出します |
+| `scene_regress.py` | 定点シーンを撮って基準の画像と比べます。`save` で今の見た目を基準として保存し、`check` で撮り直して比べ、差が上限 (`--max-mean` / `--max-over` / `--max-mean-color`) を超えたシーンがあれば終了コード 1 にします。`compare a_dir b_dir` は撮影済みのフォルダ同士を比べるだけで、ゲームは要りません |
+| `bench_presets.py` | 品質プリセットを設定の組に展開して `ab_scene.py` に渡し、同じ場面に立ったままプリセットごとのフレーム時間を記録します。`--print` で渡す設定の一覧だけを表示します |
 | `shader_options.py` | Iris の設定ファイル `<game>/shaderpacks/Ray.txt` を読み書きします |
 
 ## コンパイルを検証する
@@ -127,6 +129,9 @@ uv run pytest -q tests -k glint     # 名前で絞る
 | `test_loader_checks.py` | ローダーの上限 (flag、`bufferObject` の添字、image の数と形式、colortex) と `RENDERTARGETS` の書式の検出 |
 | `test_iris_transforms.py` | Iris の逆 Z の書き換えが効かない書き方と、予約された名前の検出 (通る例と落ちる例) |
 | `test_docs.py` | 日本語と英語の README の食い違い (ロードマップ、対応バージョンの表)、README の品質プリセットの表がプリセットの定義と合っているか、ローダーの名前がどの文書にも載っているか |
+| `test_light_pick.py` | 光源のくじ (`LIGHT_PICK_STRATIFIED`) と同じ手順を Python で書いて、期待値が変わらないことと、時間平均のばらつきが独立の乱数より小さいことを確かめます |
+| `test_gl_lens.py` | レンズの再投影 (`lensProjectUv` / `lensForwardUv`) を `pass_preview.py` で実際に描いて、往復の誤差、パニーニ投影の四隅と縦線、前からある魚眼・歪曲の往復を確かめます。OpenGL のコンテキストが要るので、`DISPLAY` が無ければ skip します (Mesa での回し方は下) |
+| `test_scene_tools.py` | `bench_presets.py` のプリセットの展開と、`scene_regress.py` の判定と画像の比較 |
 | `test_pack.py` | 生成物がどれも最新か、`*.properties` が ASCII か、lang の過不足、ローダーごとの本文 (26.3 だけがエンチャントの光沢を本体の中で足す)、宣言だけで定義の無い関数を呼んでいないか (Mesa でリンクが落ちる) |
 
 検査を足したら、通る例と落ちる例をここに足してください。ゲームを起動しないと分からなかった不具合は、原因を静的に見分けられるなら検査にして残します
@@ -137,6 +142,12 @@ GPU の無い Linux でも、Mesa のソフトウェア描画 (llvmpipe) で `gl
 
 ```bash
 MESA_GL_VERSION_OVERRIDE=4.6COMPAT MESA_GLSL_VERSION_OVERRIDE=460 xvfb-run -a uv run tools/gl_compile_check.py
+```
+
+シェーダーを実際に動かすテストも同じ環境変数で回せます
+
+```bash
+MESA_GL_VERSION_OVERRIDE=4.6COMPAT MESA_GLSL_VERSION_OVERRIDE=460 xvfb-run -a uv run pytest -q tests/test_gl_lens.py
 ```
 
 llvmpipe が名乗る OpenGL は 4.5 までなので、環境変数で 4.6 compatibility として作らせます。既定値・world0 で約 30 秒、`--full` は 5 分ほどです。NVIDIA 固有の上限 (image uniform 8 個など) は見られないので、実機のドライバでの確認の代わりにはなりません
