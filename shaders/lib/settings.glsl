@@ -18,7 +18,7 @@
 
 #define RAY_VERSION 1 // [1] 画面には lang の value.RAY_VERSION.1 (v0.1.0-alpha)
 // 作者と GitHub のリポジトリの表示用 (値が 1 つだけのダミーの設定。どのプログラムからも参照しない)
-#define RAY_AUTHOR 1 // [1] 画面には lang の value.RAY_AUTHOR.1 (kuwacom)
-#define RAY_REPO 1 // [1] 画面には lang の value.RAY_REPO.1 (github.com/kuwacom/ray)
+#define RAY_AUTHOR 1 // [1] 画面には lang の value.RAY_AUTHOR.1 (Fork の公開者と原作者)
+#define RAY_REPO 1 // [1] 画面には lang の value.RAY_REPO.1 (この Fork のリポジトリ。公式と取り違えないように非公式と書く)
 
 #endif // SETTINGS_GLSL
