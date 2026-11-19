@@ -1,5 +1,7 @@
 # Ray
 
+Based on [Ray](https://github.com/kuwacom/ray) by [kuwacom](https://github.com/kuwacom). This repository is an unofficial fork of Ray. It is not an official release by kuwacom and is not endorsed by kuwacom. The official distribution is [kuwacom/ray](https://github.com/kuwacom/ray)
+
 English | [日本語](README.md)
 
 ![Version](https://img.shields.io/badge/version-v0.1.0--alpha-orange)

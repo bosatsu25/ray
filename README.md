@@ -1,5 +1,7 @@
 # Ray
 
+Based on [Ray](https://github.com/kuwacom/ray) by [kuwacom](https://github.com/kuwacom). このリポジトリは kuwacom さんの Ray をもとにした非公式の Fork で、kuwacom さんの公式の配布物ではなく、公認も受けていません。公式の配布先は [kuwacom/ray](https://github.com/kuwacom/ray) です
+
 [English](README.en.md) | 日本語
 
 ![Version](https://img.shields.io/badge/version-v0.1.0--alpha-orange)
